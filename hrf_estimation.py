@@ -63,23 +63,34 @@ def rank_one(X, Y, alpha, size_u, u0=None, v0=None, Z=None, rtol=1e-6, verbose=F
     Parameters
     ----------
     X : array-like, sparse matrix or LinearOperator, shape (n, p)
+        The design matrix
+
     Y : array-lime, shape (n, k)
+        Time-series vector. Several time-series vectors can be given at once,
+        however for large system becomes unstable. We do not recommend
+        using more than k > 100.
+
     size_u : integer
         Must be divisor of p
+
     u0 : array
+
     Z : array, sparse matrix or LinearOperator, shape (n, q)
+        Represents the drift vectors.
+
     rtol : float
+        Relative tolerance
+
     maxiter : int
         maximum number of iterations
-    verbose : int
-        1 : a bit verbose
-        2 : very verbose
+
+    verbose : boolean
 
     Returns
     -------
     U : array, shape (size_u, k)
     V : array, shape (p / size_u, k)
-    W : XXX
+    W : coefficients associated to the drift vectors
     """
 
     X = splinalg.aslinearoperator(X)

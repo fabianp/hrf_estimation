@@ -16,7 +16,7 @@ hrf_estimation is a Python package. It can be installed through the Python Packa
 
    pip install -U hrf_estimation
 
-You can also download the source code from the PYPI website
+You can also download the source code from the `PYPI website <https://pypi.python.org/pypi/hrf_estimation>`_
 
 Function reference
 ------------------
@@ -25,6 +25,8 @@ The principal function is rank_one
 
 .. code::
 
+   def rank_one(X, Y, alpha, size_u, u0=None, v0=None, Z=None, rtol=1e-6, verbose=False, maxiter=1000):
+   """
     multi-target rank one model
 
         ||y - X vec(u v.T) - Z w||^2 + alpha * ||u - u_0||^2
@@ -60,16 +62,20 @@ The principal function is rank_one
     U : array, shape (size_u, k)
     V : array, shape (p / size_u, k)
     W : coefficients associated to the drift vectors
+    """
 
 
 Examples
 --------
 
-This IPython notebook contains code that reproduces the figures from the original article.
+`This IPython notebook
+<http://nbviewer.ipython.org/url/raw.github.com/fabianp/hrf_estimation/master/doc/figures_prni2013_gallant.ipynb>`_
+contains code that reproduces the figures from the original article.
 Development
 
-The newest version can alway be grabbed from the main repository. Feel free to submit issues, modifications or implementations for other languages!.
-This package implements the methods from paper XXX
+The newest version can alway be grabbed from the `git repository
+<http://github.com/fabianp/hrf_estimation>`_. Feel free to submit
+patches, issues or implementations for other languages!.
 
 TODO: provide fallback for einsum
 

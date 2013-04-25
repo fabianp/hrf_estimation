@@ -23,7 +23,7 @@ Function reference
 
 The principal function is rank_one
 
-..code::
+.. code::
 
     multi-target rank one model
 

@@ -23,7 +23,7 @@ Function reference
 
 The principal function is rank_one
 
-.. code::
+.. code:: python
 
    def rank_one(X, Y, alpha, size_u, u0=None, v0=None, Z=None, rtol=1e-6, verbose=False, maxiter=1000):
    """

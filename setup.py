@@ -22,9 +22,8 @@ setup(
     version=hrf_estimation.__version__,
     author='Fabian Pedregosa',
     author_email='fabian@fseoane.net',
-    url='http://fseoane.net/projects/hrf_estimation',
+    url='https://pypi.python.org/pypi/hrf_estimation',
     py_modules=['hrf_estimation'],
     classifiers=[_f for _f in CLASSIFIERS.split('\n') if _f],
     license='Simplified BSD'
-
 )

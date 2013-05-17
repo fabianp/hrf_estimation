@@ -84,5 +84,5 @@ TODO: provide fallback for einsum
 Authors
 -------
 
-`Fabian Pedregosa <http://fseoane.net>`_ <fabian@fseoane.net>
+`Fabian Pedregosa <http://fseoane.net>`_ <f@fabianp.net>
 Michael Eickenberg <michael.eickenberg@nsup.org>

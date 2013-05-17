@@ -7,6 +7,8 @@ This describes a Python package that implements the routines described in the pa
 models", Fabian Pedregosa, Michael Eickenberg, Bertrand Thirion and
 Alexandre Gramfort (submitted)
 
+.. image:: https://raw.github.com/fabianp/hrf_estimation/master/doc/estimation_natural_images.png
+
 Get the code
 ------------
 

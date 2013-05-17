@@ -73,7 +73,7 @@ Examples
 --------
 
 `This IPython notebook
-<http://nbviewer.ipython.org/url/raw.github.com/fabianp/hrf_estimation/master/doc/figures_prni2013_gallant.ipynb>`_
+<http://nbviewer.ipython.org/url/raw.github.com/fabianp/hrf_estimation/master/doc/figures_natural_images.ipynb>`_
 contains code that reproduces the figures from the original article.
 Development
 

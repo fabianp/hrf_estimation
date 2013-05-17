@@ -5,7 +5,8 @@ This describes a Python package that implements the routines described in the pa
 
 "HRF estimation improves sensitivity of fMRI encoding and decoding
 models", Fabian Pedregosa, Michael Eickenberg, Bertrand Thirion and
-Alexandre Gramfort (submitted)
+Alexandre Gramfort, `[PDF] <http://hal.inria.fr/docs/00/82/19/46/PDF/paper.pdf>`_
+`[URL] <http://hal.inria.fr/hal-00821946/en>`_
 
 .. image:: https://raw.github.com/fabianp/hrf_estimation/master/doc/estimation_natural_images.png
 

@@ -1,7 +1,7 @@
 Hemodynamic Response Function estimation from functional MRI data
 =================================================================
 
-This describes a Python package that implements the routines described in the paper
+This is a Python package that implements the routines described in the paper
 
 "HRF estimation improves sensitivity of fMRI encoding and decoding
 models", Fabian Pedregosa, Michael Eickenberg, Bertrand Thirion and
@@ -13,13 +13,14 @@ Alexandre Gramfort, `[PDF] <http://hal.inria.fr/docs/00/82/19/46/PDF/paper.pdf>`
 Get the code
 ------------
 
-hrf_estimation is a Python package. It can be installed through the Python Package Index (PYPI):
+hrf_estimation is a pure Python package and can be installed through the Python Package Index (PYPI):
 
 .. code:: bash
 
    pip install -U hrf_estimation
 
 You can also download the source code from the `PYPI website <https://pypi.python.org/pypi/hrf_estimation>`_
+or get the latest sources from `github <http://github.com/fabianp/hrf_estimation/>`_
 
 Function reference
 ------------------
@@ -80,7 +81,6 @@ The newest version can alway be grabbed from the `git repository
 <http://github.com/fabianp/hrf_estimation>`_. Feel free to submit
 patches, issues or implementations for other languages!.
 
-TODO: provide fallback for einsum
 
 Authors
 -------

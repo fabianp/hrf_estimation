@@ -2,7 +2,7 @@ import numpy as np
 from scipy import sparse, linalg, optimize
 from scipy.sparse import linalg as splinalg
 
-__version__ = '0.2'
+__version__ = '0.3'
 
 def khatri_rao(A, B):
     """

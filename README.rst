@@ -79,11 +79,12 @@ Development
 
 The newest version can alway be grabbed from the `git repository
 <http://github.com/fabianp/hrf_estimation>`_. Feel free to submit
-patches, issues or implementations for other languages!.
+issues or patches.
 
 
 Authors
 -------
 
-`Fabian Pedregosa <http://fseoane.net>`_ <f@fabianp.net>
+`Fabian Pedregosa <http://fseoane.net>`_ <f@bianp.net>
+
 Michael Eickenberg <michael.eickenberg@nsup.org>

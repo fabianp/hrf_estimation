@@ -128,24 +128,33 @@ def rank_one(X, Y, alpha, size_u, u0=None, v0=None, Z=None, rtol=1e-6, verbose=F
 
     # .. some auxiliary functions ..
     # .. used in conjugate gradient ..
-    def obj(X_, Y_, Z_, a, b, c, u0):
+    def obj(X_, Y_, Z_, a, b, c, alpha, u0):
         uv0 = khatri_rao(b, a)
+        u0 = u0.reshape((a.size, -1), order='C')
         cost = .5 * linalg.norm(Y_ - X_.matvec(uv0) - Z_.matmat(c), 'fro') ** 2
-        reg = alpha * linalg.norm(a - u0, 'fro') ** 2
+        reg = .5 * alpha * linalg.norm(a - u0, 'fro') ** 2
         return cost + reg
 
-    def f(w, X_, Y_, Z_, n_task, u0):
+    def f(w, X_, Y_, Z_, size_u, alpha, u0):
+        n_task = Y_.shape[1]
+        size_v = X_.shape[1] / size_u
+        X_ = splinalg.aslinearoperator(X_)
+        Z_ = splinalg.aslinearoperator(Z_)
         W = w.reshape((-1, n_task), order='F')
         u, v, c = W[:size_u], W[size_u:size_u + size_v], W[size_u + size_v:]
-        return obj(X_, Y_, Z_, u, v, c, u0)
+        return obj(X_, Y_, Z_, u, v, c, alpha, u0)
 
-    def fprime(w, X_, Y_, Z_, n_task, u0):
+    def fprime(w, X_, Y_, Z_, size_u, alpha, u0):
+        X_ = splinalg.aslinearoperator(X_)
+        Z_ = splinalg.aslinearoperator(Z_)
+        u0 = u0.reshape((size_u, -1), order='C')
+        n_task = Y_.shape[1]
         W = w.reshape((-1, n_task), order='F')
         u, v, c = W[:size_u], W[size_u:size_u + size_v], W[size_u + size_v:]
         tmp = Y_ - matmat2(X_, u, v, n_task) - Z_.matmat(c)
         grad = np.empty((size_u + size_v + Z_.shape[1], n_task))  # TODO: do outside
-        grad[:size_u] = rmatmat1(X, v, tmp, n_task) - alpha * (u - u0)
-        grad[size_u:size_u + size_v] = rmatmat2(X, u, tmp, n_task)
+        grad[:size_u] = rmatmat1(X_, v, tmp, n_task) - alpha * (u - u0)
+        grad[size_u:size_u + size_v] = rmatmat2(X_, u, tmp, n_task)
         grad[size_u + size_v:] = Z_.rmatvec(tmp)
         return - grad.reshape((-1,), order='F')
 
@@ -157,11 +166,12 @@ def rank_one(X, Y, alpha, size_u, u0=None, v0=None, Z=None, rtol=1e-6, verbose=F
     for y_i in Y_split: # TODO; remove
         w0_i = w0.reshape((size_u + size_v + Z_.shape[1], n_task), order='F')[:, counter:(counter + y_i.shape[1])]
         u0_i = u0[:, counter:(counter + y_i.shape[1])]
-        out = optimize.fmin_l_bfgs_b(f, w0_i, fprime=fprime, factr=rtol / np.finfo(np.float).eps,
-                                         args=(X, y_i, Z_, y_i.shape[1], u0_i), maxfun=maxiter)
-        if out[2]['warnflag'] != 0:
-            print('Not converged')
-        W = out[0].reshape((-1, y_i.shape[1]), order='F')
+        options = {'factr' : rtol / np.finfo(np.float).eps, 'maxfun' : maxiter}
+        res = optimize.minimize(f, w0_i.ravel(), jac=fprime, method='TNC', options=options,
+                     args=(X, y_i, Z_, size_u, alpha, u0_i), tol=1e-12)
+        #if out[2]['warnflag'] != 0:
+        #    print('Not converged')
+        W = res.x.reshape((-1, y_i.shape[1]), order='F')
         U[:, counter:counter + y_i.shape[1]] = W[:size_u]
         V[:, counter:counter + y_i.shape[1]] = W[size_u:size_u + size_v]
         C[:, counter:counter + y_i.shape[1]] = W[size_u + size_v:]

@@ -1,22 +1,26 @@
 Hemodynamic Response Function estimation from functional MRI data
 =================================================================
 
-This describes a Python package that implements the routines described in the paper
+This is a Python package that implements the routines described in the paper
 
 "HRF estimation improves sensitivity of fMRI encoding and decoding
 models", Fabian Pedregosa, Michael Eickenberg, Bertrand Thirion and
-Alexandre Gramfort (submitted)
+Alexandre Gramfort, `[PDF] <http://hal.inria.fr/docs/00/82/19/46/PDF/paper.pdf>`_
+`[URL] <http://hal.inria.fr/hal-00821946/en>`_
+
+.. image:: https://raw.github.com/fabianp/hrf_estimation/master/doc/estimation_natural_images.png
 
 Get the code
 ------------
 
-hrf_estimation is a Python package. It can be installed through the Python Package Index (PYPI):
+hrf_estimation is a pure Python package and can be installed through the Python Package Index (PYPI):
 
 .. code:: bash
 
    pip install -U hrf_estimation
 
 You can also download the source code from the `PYPI website <https://pypi.python.org/pypi/hrf_estimation>`_
+or get the latest sources from `github <http://github.com/fabianp/hrf_estimation/>`_
 
 Function reference
 ------------------
@@ -69,18 +73,18 @@ Examples
 --------
 
 `This IPython notebook
-<http://nbviewer.ipython.org/url/raw.github.com/fabianp/hrf_estimation/master/doc/figures_prni2013_gallant.ipynb>`_
+<http://nbviewer.ipython.org/url/raw.github.com/fabianp/hrf_estimation/master/doc/figures_natural_images.ipynb>`_
 contains code that reproduces the figures from the original article.
 Development
 
 The newest version can alway be grabbed from the `git repository
 <http://github.com/fabianp/hrf_estimation>`_. Feel free to submit
-patches, issues or implementations for other languages!.
+issues or patches.
 
-TODO: provide fallback for einsum
 
 Authors
 -------
 
-`Fabian Pedregosa <http://fseoane.net>`_ <fabian@fseoane.net>
+`Fabian Pedregosa <http://fseoane.net>`_ <f@bianp.net>
+
 Michael Eickenberg <michael.eickenberg@nsup.org>

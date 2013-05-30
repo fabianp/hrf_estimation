@@ -102,14 +102,30 @@ def hess(s, w, X_, Y_, Z_, size_u, alpha, u0):
     tmp = matmat2(X_, u, s2, n_task)
     Ds2 = rmatmat2(X_, u, tmp, n_task)
     tmp = Z_.matvec(s3)
-    Cs3 = rmatmat2(X_, u, tmp, n_task)
+
+    Cs3 = rmatmat1(X_, v, tmp, n_task)
     tmp = matmat2(X_, s1, v, n_task).T
-    Cs1 = Z_.rmatvec(tmp.T)
+    Cts1 = Z_.rmatvec(tmp.T)
 
     tmp = matmat2(X_, u, s2, n_task)
     Bs2 = rmatmat1(X_, v, tmp, n_task) + W2.dot(s2) - XY.dot(s2)
 
-    return Ds2
+    tmp = matmat2(X_, s1, v, n_task)
+    Bts1 = rmatmat2(X_, u, tmp, n_task) + W2.T.dot(s1) - XY.T.dot(s1)
+
+    tmp = Z_.matvec(s3)
+    Es3 = rmatmat2(X_, u, tmp, n_task)
+
+    tmp = matmat2(X_, u, s2, n_task)
+    Ets2 = Z_.rmatvec(tmp)
+
+    Fs3 = - Z_.rmatvec(Z_.matvec(s3))
+
+    line0 = As1 + Bs2 + Cs3
+    line1 = Bts1 + Ds2 + Es3
+    line2 = Cts1 + Ets2 + Fs3
+
+    return np.concatenate((line0, line1, line2))
 
 if __name__ == '__main__':
     n_target = 1
@@ -126,17 +142,17 @@ if __name__ == '__main__':
     import numdifftools as nd
     import pylab as pl
     H = nd.Hessian(lambda x: f(x, X1, Y1, Z1, size_u, 0., canonical))
-    pl.matshow(H(x0)[size_u:size_u + size_v, size_u:size_u + size_v])
+    pl.matshow(H(x0)[:size_u+size_v, :size_u+size_v])
     pl.colorbar()
 
     E = np.eye(size_u + size_v + Z1.shape[1])
     out = []
-    for i in range(size_u, size_u + size_v):
+    for i in range(E.shape[0]):
         ei = E[i]
         ei = ei.reshape((-1, 1))
         tmp = hess(ei, x0, X1, Y1, Z1, size_u, 0., canonical)
         out.append(tmp.ravel())
-
-    pl.matshow(out)
+    true_H = np.array(out)
+    pl.matshow(true_H[:size_u+size_v, :size_u+size_v])
     pl.colorbar()
     pl.show()

@@ -85,6 +85,6 @@ issues or patches.
 Authors
 -------
 
-`Fabian Pedregosa <http://fseoane.net>`_ <f@bianp.net>
+`Fabian Pedregosa <http://fa.bianp.net>`_ <f@bianp.net>
 
 Michael Eickenberg <michael.eickenberg@nsup.org>

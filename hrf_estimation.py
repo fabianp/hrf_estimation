@@ -130,7 +130,6 @@ def rank_one(X, Y, alpha, size_u, u0=None, v0=None, Z=None, rtol=1e-6, verbose=F
     # .. used in conjugate gradient ..
     def obj(X_, Y_, Z_, a, b, c, alpha, u0):
         uv0 = khatri_rao(b, a)
-        u0 = u0.reshape((a.size, -1), order='C')
         cost = .5 * linalg.norm(Y_ - X_.matvec(uv0) - Z_.matmat(c), 'fro') ** 2
         reg = .5 * alpha * linalg.norm(a - u0, 'fro') ** 2
         return cost + reg
@@ -166,8 +165,8 @@ def rank_one(X, Y, alpha, size_u, u0=None, v0=None, Z=None, rtol=1e-6, verbose=F
     for y_i in Y_split: # TODO; remove
         w0_i = w0.reshape((size_u + size_v + Z_.shape[1], n_task), order='F')[:, counter:(counter + y_i.shape[1])]
         u0_i = u0[:, counter:(counter + y_i.shape[1])]
-        options = {'factr' : rtol / np.finfo(np.float).eps, 'maxfun' : maxiter}
-        res = optimize.minimize(f, w0_i.ravel(), jac=fprime, method='TNC', options=options,
+        options = {'factr' : rtol / np.finfo(np.float).eps, 'maxfun' : maxiter, 'verbose' : verbose}
+        res = optimize.minimize(f, w0_i.ravel(), jac=fprime, method='L-BFGS-B', options=options,
                      args=(X, y_i, Z_, size_u, alpha, u0_i), tol=1e-12)
         #if out[2]['warnflag'] != 0:
         #    print('Not converged')

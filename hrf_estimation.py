@@ -54,7 +54,8 @@ def rmatmat2(X, a, b, n_task):
     tmp = np.einsum("ijk, ik -> ij", B, a.T).T
     return tmp
 
-def rank_one(X, Y, alpha, size_u, u0=None, v0=None, Z=None, rtol=1e-6, verbose=False, maxiter=1000):
+def rank_one(X, Y, alpha, size_u, u0=None, v0=None, Z=None, rtol=1e-6, 
+    verbose=False, maxiter=1000, callback=None):
     """
     multi-target rank one model
 
@@ -113,8 +114,7 @@ def rank_one(X, Y, alpha, size_u, u0=None, v0=None, Z=None, rtol=1e-6, verbose=F
     if u0 is None:
         u0 = np.ones((size_u, n_task))
     if u0.size == size_u:
-        u0 = u0.reshape((-1, 1))
-        u0 = np.repeat(u0, n_task, axis=1)
+        u0 = np.asfortranarray(np.outer(u0, np.ones(n_task)))
     if v0 is None:
         v0 = np.ones(X.shape[1] / size_u * n_task)  # np.random.randn(shape_B[1])
 
@@ -124,7 +124,7 @@ def rank_one(X, Y, alpha, size_u, u0=None, v0=None, Z=None, rtol=1e-6, verbose=F
     w0 = np.zeros((size_u + size_v + Z_.shape[1], n_task))
     w0[:size_u] = u0
     w0[size_u:size_u + size_v] = v0
-    w0 = w0.reshape((-1,), order='F')
+    w0 = w0.ravel('F')
 
     # .. some auxiliary functions ..
     # .. used in conjugate gradient ..
@@ -165,9 +165,10 @@ def rank_one(X, Y, alpha, size_u, u0=None, v0=None, Z=None, rtol=1e-6, verbose=F
     for y_i in Y_split: # TODO; remove
         w0_i = w0.reshape((size_u + size_v + Z_.shape[1], n_task), order='F')[:, counter:(counter + y_i.shape[1])]
         u0_i = u0[:, counter:(counter + y_i.shape[1])]
-        options = {'factr' : rtol / np.finfo(np.float).eps, 'maxfun' : maxiter, 'verbose' : verbose}
-        res = optimize.minimize(f, w0_i.ravel(), jac=fprime, method='L-BFGS-B', options=options,
-                     args=(X, y_i, Z_, size_u, alpha, u0_i), tol=1e-12)
+        options = {'factr' : rtol / np.finfo(np.float).eps, 'maxfun' : maxiter, 
+            'verbose' : verbose}
+        res = optimize.minimize(f, w0_i.ravel('F'), jac=fprime, method='L-BFGS-B', options=options,
+                     args=(X, y_i, Z_, size_u, alpha, u0_i), tol=1e-12, callback=callback)
         #if out[2]['warnflag'] != 0:
         #    print('Not converged')
         W = res.x.reshape((-1, y_i.shape[1]), order='F')

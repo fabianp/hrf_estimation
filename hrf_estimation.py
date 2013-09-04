@@ -243,10 +243,11 @@ def rank_one(X, Y, size_u, u0=None, v0=None, Z=None,
             f, w0_i, jac=fprime, args=args, hessp=hess,
             method=method, options=options,
             callback=callback)
-        if hasattr(out, 'nit'):
-            print('Number of iterations: %s' % out.nit)
-        if hasattr(out, 'fun'):
-            print('Loss function: %s' % out.fun)
+        if verbose:
+            if hasattr(out, 'nit'):
+                print('Number of iterations: %s' % out.nit)
+            if hasattr(out, 'fun'):
+                print('Loss function: %s' % out.fun)
         out = out.x
         if plot:
             do_plot(out)

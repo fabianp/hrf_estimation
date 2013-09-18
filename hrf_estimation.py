@@ -86,7 +86,8 @@ def rank_one(X, Y, size_u, u0=None, v0=None, Z=None,
      maxiter : int
          maximum number of iterations
 
-     verbose : boolean
+     verbose : {0, 1, 2}
+         Different levels of verbosity
 
      Returns
      -------
@@ -238,7 +239,11 @@ def rank_one(X, Y, size_u, u0=None, v0=None, Z=None,
         u0_i = u0[:, i].reshape((-1, 1))
 
         args = (X, y_i, Z_, 1, u0_i)
-        options = {'maxiter' : maxiter, 'xtol' : rtol}
+        options = {'maxiter' : maxiter, 'xtol' : rtol,
+                   'verbose': verbose}
+        if int(verbose) > 1:
+            options['disp'] = 5
+
         out = optimize.minimize(
             f, w0_i, jac=fprime, args=args, hessp=hess,
             method=method, options=options,

@@ -197,7 +197,9 @@ def rank_one(X, Y, size_u, u0=None, v0=None, Z=None,
         line1 = Bts1 + Ds2 + Es3
         line2 = Cts1 + Ets2 + Fs3
 
-        return np.concatenate((line0, line1, line2)).ravel()
+        out = np.concatenate((line0, line1, line2)).ravel()
+
+        return out
 
 
     if plot:
@@ -249,6 +251,7 @@ def rank_one(X, Y, size_u, u0=None, v0=None, Z=None,
             method=method, options=options,
             callback=callback)
         if verbose:
+            print('Finished problem %s out of %s' % (i+1, n_task))
             if hasattr(out, 'nit'):
                 print('Number of iterations: %s' % out.nit)
             if hasattr(out, 'fun'):

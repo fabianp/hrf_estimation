@@ -57,17 +57,17 @@ def rmatmat2(X, a, b, n_task):
 
 # .. some auxiliary functions ..
 # .. used in optimization ..
-def obj(X_, Y_, Z_, a, b, c, u0):
+def obj(X_, Y_, Z_, a, b, c, u0, size_u, size_v):
     uv0 = khatri_rao(b, a)
     cost = .5 * linalg.norm(Y_ - X_.matvec(uv0) - Z_.matmat(c), 'fro') ** 2
     return cost
 
-def f(w, X_, Y_, Z_, n_task, u0):
+def f(w, X_, Y_, Z_, n_task, u0, size_u, size_v):
     W = w.reshape((-1, 1), order='F')
     u, v, c = W[:size_u], W[size_u:size_u + size_v], W[size_u + size_v:]
-    return obj(X_, Y_, Z_, u, v, c, u0)
+    return obj(X_, Y_, Z_, u, v, c, u0, size_u, size_v)
 
-def fprime(w, X_, Y_, Z_, n_task, u0):
+def fprime(w, X_, Y_, Z_, n_task, u0, size_u, size_v):
     n_task = 1
     W = w.reshape((-1, 1), order='F')
     u, v, c = W[:size_u], W[size_u:size_u + size_v], W[size_u + size_v:]
@@ -79,7 +79,7 @@ def fprime(w, X_, Y_, Z_, n_task, u0):
     return - grad.reshape((-1,), order='F')
 
 
-def hess(w, s, X_, Y_, Z_, n_task, u0):
+def hess(w, s, X_, Y_, Z_, n_task, u0, size_u, size_v):
     # TODO: regularization
     s = s.reshape((-1, 1))
     X_ = splinalg.aslinearoperator(X_)
@@ -131,7 +131,7 @@ def _rank_one_inner_loop(X, y_i, Z_, callback, i, maxiter, method,
                          n_task, rtol, size_u, size_v, u0, verbose, w0):
     w0_i = w0[:, i].ravel('F')
     u0_i = u0[:, i].reshape((-1, 1))
-    args = (X, y_i, Z_, 1, u0_i)
+    args = (X, y_i, Z_, 1, u0_i, size_u, size_v)
     options = {'maxiter': maxiter, 'xtol': rtol,
                'verbose': verbose}
     if int(verbose) > 1:

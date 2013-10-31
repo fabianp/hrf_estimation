@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import sparse, linalg, optimize
 from scipy.sparse import linalg as splinalg
+from joblib import Parallel, delayed
 
 __version__ = '0.3'
 
@@ -54,9 +55,110 @@ def rmatmat2(X, a, b, n_task):
     tmp = np.einsum("ijk, ik -> ij", B, a.T).T
     return tmp
 
+# .. some auxiliary functions ..
+# .. used in optimization ..
+def obj(X_, Y_, Z_, a, b, c, u0):
+    uv0 = khatri_rao(b, a)
+    cost = .5 * linalg.norm(Y_ - X_.matvec(uv0) - Z_.matmat(c), 'fro') ** 2
+    return cost
+
+def f(w, X_, Y_, Z_, n_task, u0):
+    W = w.reshape((-1, 1), order='F')
+    u, v, c = W[:size_u], W[size_u:size_u + size_v], W[size_u + size_v:]
+    return obj(X_, Y_, Z_, u, v, c, u0)
+
+def fprime(w, X_, Y_, Z_, n_task, u0):
+    n_task = 1
+    W = w.reshape((-1, 1), order='F')
+    u, v, c = W[:size_u], W[size_u:size_u + size_v], W[size_u + size_v:]
+    tmp = Y_ - matmat2(X_, u, v, 1) - Z_.matmat(c)
+    grad = np.empty((size_u + size_v + Z_.shape[1], 1))  # TODO: do outside
+    grad[:size_u] = rmatmat1(X_, v, tmp, 1)
+    grad[size_u:size_u + size_v] = rmatmat2(X_, u, tmp, 1)
+    grad[size_u + size_v:] = Z_.rmatvec(tmp)
+    return - grad.reshape((-1,), order='F')
+
+
+def hess(w, s, X_, Y_, Z_, n_task, u0):
+    # TODO: regularization
+    s = s.reshape((-1, 1))
+    X_ = splinalg.aslinearoperator(X_)
+    Z_ = splinalg.aslinearoperator(Z_)
+    size_v = X_.shape[1] / size_u
+    W = w.reshape((-1, 1), order='F')
+    XY = X_.rmatvec(Y_)  # TODO: move out
+    u, v, c = W[:size_u], W[size_u:size_u + size_v], W[size_u + size_v:]
+    s1, s2, s3 = s[:size_u], s[size_u:size_u + size_v], s[size_u + size_v:]
+    W2 = X_.rmatvec(matmat2(X_, u, v, 1))
+    W2 = W2.reshape((-1, s2.shape[0]), order='F')
+    XY = XY.reshape((-1, s2.shape[0]), order='F')
+
+    n_task = 1
+    A_tmp = matmat2(X_, s1, v, n_task)
+    As1 = rmatmat1(X_, v, A_tmp, n_task)
+    tmp = matmat2(X_, u, s2, n_task)
+    Ds2 = rmatmat2(X_, u, tmp, n_task)
+    tmp = Z_.matvec(s3)
+
+    Cs3 = rmatmat1(X_, v, tmp, n_task)
+    tmp = matmat2(X_, s1, v, n_task).T
+    Cts1 = Z_.rmatvec(tmp.T)
+
+    tmp = matmat2(X_, u, s2, n_task)
+    Bs2 = rmatmat1(X_, v, tmp, n_task) + W2.dot(s2) - XY.dot(s2)
+
+    tmp = matmat2(X_, s1, v, n_task)
+    Bts1 = rmatmat2(X_, u, tmp, n_task) + W2.T.dot(s1) - XY.T.dot(s1)
+
+    tmp = Z_.matvec(s3)
+    Es3 = rmatmat2(X_, u, tmp, n_task)
+
+    tmp = matmat2(X_, u, s2, n_task)
+    Ets2 = Z_.rmatvec(tmp)
+
+    Fs3 = - Z_.rmatvec(Z_.matvec(s3))
+
+    line0 = As1 + Bs2 + Cs3
+    line1 = Bts1 + Ds2 + Es3
+    line2 = Cts1 + Ets2 + Fs3
+
+    out = np.concatenate((line0, line1, line2)).ravel()
+
+    return out
+
+
+def _rank_one_inner_loop(X, y_i, Z_, callback, i, maxiter, method,
+                         n_task, rtol, size_u, size_v, u0, verbose, w0):
+    w0_i = w0[:, i].ravel('F')
+    u0_i = u0[:, i].reshape((-1, 1))
+    args = (X, y_i, Z_, 1, u0_i)
+    options = {'maxiter': maxiter, 'xtol': rtol,
+               'verbose': verbose}
+    if int(verbose) > 1:
+        options['disp'] = 5
+    out = optimize.minimize(
+        f, w0_i, jac=fprime, args=args, hessp=hess,
+        method=method, options=options,
+        callback=callback)
+    if verbose:
+        print('Finished problem %s out of %s' % (i + 1, n_task))
+        if hasattr(out, 'nit'):
+            print('Number of iterations: %s' % out.nit)
+        if hasattr(out, 'fun'):
+            print('Loss function: %s' % out.fun)
+    out = out.x
+    W = out.reshape((-1, y_i.shape[1]), order='F')
+    ui = W[:size_u].ravel()
+    norm_ui = linalg.norm(ui)
+    Ui = ui / norm_ui
+    Vi = W[size_u:size_u + size_v].ravel() * norm_ui
+    Ci = W[size_u + size_v:].ravel()
+    return Ui, Vi, Ci
+
+
 def rank_one(X, Y, size_u, u0=None, v0=None, Z=None,
              rtol=1e-6, verbose=False, maxiter=1000, callback=None,
-             plot=False, method='TNC'):
+             method='TNC', n_jobs=1):
     """
      multi-target rank one model
 
@@ -128,143 +230,21 @@ def rank_one(X, Y, size_u, u0=None, v0=None, Z=None,
     w0[:size_u] = u0
     w0[size_u:size_u + size_v] = v0
 
-    # .. some auxiliary functions ..
-    # .. used in conjugate gradient ..
-    def obj(X_, Y_, Z_, a, b, c, u0):
-        uv0 = khatri_rao(b, a)
-        cost = .5 * linalg.norm(Y_ - X_.matvec(uv0) - Z_.matmat(c), 'fro') ** 2
-        #print('LOSS: %s' % cost)
-        reg = alpha * linalg.norm(a - u0, 'fro') ** 2
-        return cost + reg
-
-    def f(w, X_, Y_, Z_, n_task, u0):
-        W = w.reshape((-1, 1), order='F')
-        u, v, c = W[:size_u], W[size_u:size_u + size_v], W[size_u + size_v:]
-        return obj(X_, Y_, Z_, u, v, c, u0)
-
-    def fprime(w, X_, Y_, Z_, n_task, u0):
-        n_task = 1
-        W = w.reshape((-1, 1), order='F')
-        u, v, c = W[:size_u], W[size_u:size_u + size_v], W[size_u + size_v:]
-        tmp = Y_ - matmat2(X_, u, v, 1) - Z_.matmat(c)
-        grad = np.empty((size_u + size_v + Z_.shape[1], 1))  # TODO: do outside
-        grad[:size_u] = rmatmat1(X, v, tmp, 1) - alpha * (u - u0)
-        grad[size_u:size_u + size_v] = rmatmat2(X, u, tmp, 1)
-        grad[size_u + size_v:] = Z_.rmatvec(tmp)
-        return - grad.reshape((-1,), order='F')
-
-
-    def hess(w, s, X_, Y_, Z_, n_task, u0):
-        # TODO: regularization
-        s = s.reshape((-1, 1))
-        X_ = splinalg.aslinearoperator(X_)
-        Z_ = splinalg.aslinearoperator(Z_)
-        size_v = X_.shape[1] / size_u
-        W = w.reshape((-1, 1), order='F')
-        XY = X_.rmatvec(Y_)  # TODO: move out
-        u, v, c = W[:size_u], W[size_u:size_u + size_v], W[size_u + size_v:]
-        s1, s2, s3 = s[:size_u], s[size_u:size_u + size_v], s[size_u + size_v:]
-        W2 = X_.rmatvec(matmat2(X_, u, v, 1))
-        W2 = W2.reshape((-1, s2.shape[0]), order='F')
-        XY = XY.reshape((-1, s2.shape[0]), order='F')
-
-        n_task = 1
-        A_tmp = matmat2(X_, s1, v, n_task)
-        As1 = rmatmat1(X_, v, A_tmp, n_task)
-        tmp = matmat2(X_, u, s2, n_task)
-        Ds2 = rmatmat2(X_, u, tmp, n_task)
-        tmp = Z_.matvec(s3)
-
-        Cs3 = rmatmat1(X_, v, tmp, n_task)
-        tmp = matmat2(X_, s1, v, n_task).T
-        Cts1 = Z_.rmatvec(tmp.T)
-
-        tmp = matmat2(X_, u, s2, n_task)
-        Bs2 = rmatmat1(X_, v, tmp, n_task) + W2.dot(s2) - XY.dot(s2)
-
-        tmp = matmat2(X_, s1, v, n_task)
-        Bts1 = rmatmat2(X_, u, tmp, n_task) + W2.T.dot(s1) - XY.T.dot(s1)
-
-        tmp = Z_.matvec(s3)
-        Es3 = rmatmat2(X_, u, tmp, n_task)
-
-        tmp = matmat2(X_, u, s2, n_task)
-        Ets2 = Z_.rmatvec(tmp)
-
-        Fs3 = - Z_.rmatvec(Z_.matvec(s3))
-
-        line0 = As1 + Bs2 + Cs3
-        line1 = Bts1 + Ds2 + Es3
-        line2 = Cts1 + Ets2 + Fs3
-
-        out = np.concatenate((line0, line1, line2)).ravel()
-
-        return out
-
-
-    if plot:
-        import pylab as pl
-        fig = pl.figure()
-        pl.show()
-        from nipy.modalities.fmri import hemodynamic_models as hdm
-        canonical = hdm.glover_hrf(1., 1., size_u)
-        canonical -= canonical.mean()
-        pl.plot(canonical / (canonical.max() - canonical.min()), lw=4)
-        pl.draw()
-
-
-    def do_plot(w):
-        from nipy.modalities.fmri import hemodynamic_models as hdm
-        canonical = hdm.glover_hrf(1., 1., size_u)
-        print('PLOT')
-        W = w.reshape((-1, 1), order='F')
-        u, v, c = W[:size_u], W[size_u:size_u + size_v], W[size_u + size_v:]
-        #u -= u.mean(0)
-        #pl.clf()
-        tmp = u.copy()
-        sgn = np.sign(u.max(0))
-        tmp *= sgn
-        norm = tmp.max(0) - tmp.min(0)
-        tmp = tmp / norm
-        pl.plot(tmp)
-        # pl.ylim((-1, 1.2))
-        pl.draw()
-        pl.xlim((0, size_u))
-
     U = np.zeros((size_u, n_task))
     V = np.zeros((size_v, n_task))
     C = np.zeros((Z_.shape[1], n_task))
 
-    for i in range(n_task):
-        y_i = Y[:, i].reshape((-1, 1))
-        w0_i = w0[:, i].ravel('F')
-        u0_i = u0[:, i].reshape((-1, 1))
+    out = Parallel(n_jobs=n_jobs)(
+        delayed(_rank_one_inner_loop)(
+            X, Y[:, i][:, None], Z_, callback, i, maxiter,
+            method, n_task, rtol, size_u, size_v, u0, verbose, w0)
+        for i in range(Y.shape[1]))
 
-        args = (X, y_i, Z_, 1, u0_i)
-        options = {'maxiter' : maxiter, 'xtol' : rtol,
-                   'verbose': verbose}
-        if int(verbose) > 1:
-            options['disp'] = 5
-
-        out = optimize.minimize(
-            f, w0_i, jac=fprime, args=args, hessp=hess,
-            method=method, options=options,
-            callback=callback)
-        if verbose:
-            print('Finished problem %s out of %s' % (i+1, n_task))
-            if hasattr(out, 'nit'):
-                print('Number of iterations: %s' % out.nit)
-            if hasattr(out, 'fun'):
-                print('Loss function: %s' % out.fun)
-        out = out.x
-        if plot:
-            do_plot(out)
-        W = out.reshape((-1, y_i.shape[1]), order='F')
-        ui = W[:size_u].ravel()
-        norm_ui = linalg.norm(ui)
-        U[:, i] = ui / norm_ui
-        V[:, i] = W[size_u:size_u + size_v].ravel() * norm_ui
-        C[:, i] = W[size_u + size_v:].ravel()
+    for i in range(Y.shape[1]):
+        tmp = out[i]
+        U[:, i] = tmp[0]
+        V[:, i] = tmp[1]
+        C[:, i] = tmp[2]
 
     if Z is None:
         return U, V
@@ -281,7 +261,7 @@ if __name__ == '__main__':
     B = np.dot(u_true, v_true.T)
     y = X.dot(B.ravel('F')) + .1 * np.random.randn(X.shape[0])
     #y = np.array([i * y for i in range(1, 3)]).T
-    u, v, w = rank_one(X.A, y, .1, size_u, Z=np.random.randn(X.shape[0], 3), verbose=True, rtol=1e-10)
+    u, v, w = rank_one(X.A, y, size_u, Z=np.random.randn(X.shape[0], 3), verbose=True, rtol=1e-10)
 
     import pylab as plt
     plt.matshow(B)

@@ -224,7 +224,6 @@ def rank_one(X, Y, size_u, u0=None, v0=None,
         tmp = out[i]
         U[:, i] = tmp[0]
         V[:, i] = tmp[1]
-        C[:, i] = tmp[2]
 
     if Z is None:
         return U, V

@@ -57,33 +57,31 @@ def rmatmat2(X, a, b, n_task):
 
 # .. some auxiliary functions ..
 # .. used in optimization ..
-def obj(X_, Y_, Z_, a, b, c, u0, size_u, size_v):
+def obj(X_, Y_, a, b, u0, size_u, size_v):
     uv0 = khatri_rao(b, a)
-    cost = .5 * linalg.norm(Y_ - X_.matvec(uv0) - Z_.matmat(c), 'fro') ** 2
+    cost = .5 * linalg.norm(Y_ - X_.matvec(uv0), 'fro') ** 2
     return cost
 
-def f(w, X_, Y_, Z_, n_task, u0, size_u, size_v):
+def f(w, X_, Y_, n_task, u0, size_u, size_v):
     W = w.reshape((-1, 1), order='F')
-    u, v, c = W[:size_u], W[size_u:size_u + size_v], W[size_u + size_v:]
-    return obj(X_, Y_, Z_, u, v, c, u0, size_u, size_v)
+    u, v = W[:size_u], W[size_u:size_u + size_v]
+    return obj(X_, Y_, u, v, u0, size_u, size_v)
 
-def fprime(w, X_, Y_, Z_, n_task, u0, size_u, size_v):
+def fprime(w, X_, Y_, n_task, u0, size_u, size_v):
     n_task = 1
     W = w.reshape((-1, 1), order='F')
-    u, v, c = W[:size_u], W[size_u:size_u + size_v], W[size_u + size_v:]
-    tmp = Y_ - matmat2(X_, u, v, 1) - Z_.matmat(c)
-    grad = np.empty((size_u + size_v + Z_.shape[1], 1))  # TODO: do outside
+    u, v = W[:size_u], W[size_u:size_u + size_v]
+    tmp = Y_ - matmat2(X_, u, v, 1)
+    grad = np.empty((size_u + size_v, 1))  # TODO: do outside
     grad[:size_u] = rmatmat1(X_, v, tmp, 1)
     grad[size_u:size_u + size_v] = rmatmat2(X_, u, tmp, 1)
-    grad[size_u + size_v:] = Z_.rmatvec(tmp)
     return - grad.reshape((-1,), order='F')
 
 
-def hess(w, s, X_, Y_, Z_, n_task, u0, size_u, size_v):
+def hess(w, s, X_, Y_, n_task, u0, size_u, size_v):
     # TODO: regularization
     s = s.reshape((-1, 1))
     X_ = splinalg.aslinearoperator(X_)
-    Z_ = splinalg.aslinearoperator(Z_)
     size_v = X_.shape[1] / size_u
     W = w.reshape((-1, 1), order='F')
     XY = X_.rmatvec(Y_)  # TODO: move out
@@ -98,11 +96,8 @@ def hess(w, s, X_, Y_, Z_, n_task, u0, size_u, size_v):
     As1 = rmatmat1(X_, v, A_tmp, n_task)
     tmp = matmat2(X_, u, s2, n_task)
     Ds2 = rmatmat2(X_, u, tmp, n_task)
-    tmp = Z_.matvec(s3)
 
-    Cs3 = rmatmat1(X_, v, tmp, n_task)
     tmp = matmat2(X_, s1, v, n_task).T
-    Cts1 = Z_.rmatvec(tmp.T)
 
     tmp = matmat2(X_, u, s2, n_task)
     Bs2 = rmatmat1(X_, v, tmp, n_task) + W2.dot(s2) - XY.dot(s2)
@@ -110,28 +105,24 @@ def hess(w, s, X_, Y_, Z_, n_task, u0, size_u, size_v):
     tmp = matmat2(X_, s1, v, n_task)
     Bts1 = rmatmat2(X_, u, tmp, n_task) + W2.T.dot(s1) - XY.T.dot(s1)
 
-    tmp = Z_.matvec(s3)
-    Es3 = rmatmat2(X_, u, tmp, n_task)
 
     tmp = matmat2(X_, u, s2, n_task)
-    Ets2 = Z_.rmatvec(tmp)
 
-    Fs3 = - Z_.rmatvec(Z_.matvec(s3))
-
-    line0 = As1 + Bs2 + Cs3
-    line1 = Bts1 + Ds2 + Es3
-    line2 = Cts1 + Ets2 + Fs3
+    line0 = As1 + Bs2
+    line1 = Bts1 + Ds2
 
     out = np.concatenate((line0, line1, line2)).ravel()
 
     return out
 
 
-def _rank_one_inner_loop(X, y_i, Z_, callback, i, maxiter, method,
+def _rank_one_inner_loop(X, y_i, callback, i, maxiter, method,
                          n_task, rtol, size_u, size_v, u0, verbose, w0):
+    X = splinalg.aslinearoperator(X)
+    # tmp fix, create zero operator
     w0_i = w0[:, i].ravel('F')
     u0_i = u0[:, i].reshape((-1, 1))
-    args = (X, y_i, Z_, 1, u0_i, size_u, size_v)
+    args = (X, y_i, 1, u0_i, size_u, size_v)
     options = {'maxiter': maxiter, 'xtol': rtol,
                'verbose': verbose}
     if int(verbose) > 1:
@@ -156,7 +147,7 @@ def _rank_one_inner_loop(X, y_i, Z_, callback, i, maxiter, method,
     return Ui, Vi, Ci
 
 
-def rank_one(X, Y, size_u, u0=None, v0=None, Z=None,
+def rank_one(X, Y, size_u, u0=None, v0=None,
              rtol=1e-6, verbose=False, maxiter=1000, callback=None,
              method='TNC', n_jobs=1):
     """
@@ -179,9 +170,6 @@ def rank_one(X, Y, size_u, u0=None, v0=None, Z=None,
 
      u0 : array
 
-     Z : array, sparse matrix or LinearOperator, shape (n, q)
-         Represents the drift vectors.
-
      rtol : float
          Relative tolerance
 
@@ -198,14 +186,6 @@ def rank_one(X, Y, size_u, u0=None, v0=None, Z=None,
      W : coefficients associated to the drift vectors
      """
     alpha = 0.
-    X = splinalg.aslinearoperator(X)
-    if Z is None:
-        # create zero operator
-        Z_ = splinalg.LinearOperator(shape=(X.shape[0], 1),
-                                     matvec=lambda x: np.zeros((X.shape[0], x.shape[1])),
-                                     rmatvec=lambda x: np.zeros((1, x.shape[1])), dtype=np.float)
-    else:
-        Z_ = splinalg.aslinearoperator(Z)
     Y = np.asarray(Y)
     if Y.ndim == 1:
         Y = Y.reshape((-1, 1))
@@ -226,17 +206,17 @@ def rank_one(X, Y, size_u, u0=None, v0=None, Z=None,
     size_v = X.shape[1] / size_u
     #u0 = u0.reshape((-1, n_task))
     v0 = v0.reshape((-1, n_task))
-    w0 = np.zeros((size_u + size_v + Z_.shape[1], n_task))
+    w0 = np.zeros((size_u + size_v, n_task))
     w0[:size_u] = u0
     w0[size_u:size_u + size_v] = v0
 
     U = np.zeros((size_u, n_task))
     V = np.zeros((size_v, n_task))
-    C = np.zeros((Z_.shape[1], n_task))
+    C = np.zeros((1, n_task))
 
     out = Parallel(n_jobs=n_jobs)(
         delayed(_rank_one_inner_loop)(
-            X, Y[:, i][:, None], Z_, callback, i, maxiter,
+            X, Y[:, i][:, None], callback, i, maxiter,
             method, n_task, rtol, size_u, size_v, u0, verbose, w0)
         for i in range(Y.shape[1]))
 
@@ -261,7 +241,7 @@ if __name__ == '__main__':
     B = np.dot(u_true, v_true.T)
     y = X.dot(B.ravel('F')) + .1 * np.random.randn(X.shape[0])
     #y = np.array([i * y for i in range(1, 3)]).T
-    u, v, w = rank_one(X.A, y, size_u, Z=np.random.randn(X.shape[0], 3), verbose=True, rtol=1e-10)
+    u, v, w = rank_one(X.A, y, size_u, verbose=True, rtol=1e-10)
 
     import pylab as plt
     plt.matshow(B)

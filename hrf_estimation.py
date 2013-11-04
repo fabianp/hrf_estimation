@@ -118,8 +118,6 @@ def hess(w, s, X_, Y_, n_task, size_u, size_v):
 
 def _rank_one_inner_loop(X, y_i, callback, maxiter, method,
                          n_task, rtol, size_u, size_v, verbose, w0):
-    # np.save('y_i.npy', y_i)
-    # np.save('X', X.toarray())
     X = splinalg.aslinearoperator(X)
     n_task = y_i.shape[1]
     w0 = np.random.randn((size_u + size_v))
@@ -141,7 +139,6 @@ def _rank_one_inner_loop(X, y_i, callback, maxiter, method,
                 print('Number of iterations: %s' % out.nit)
             if hasattr(out, 'fun'):
                 print('Loss function: %s' % out.fun)
-        import ipdb; ipdb.set_trace()
         out = out.x
         w0 = out # use as warm restart
         ui = out[:size_u].ravel()
@@ -150,11 +147,6 @@ def _rank_one_inner_loop(X, y_i, callback, maxiter, method,
         Vi = out[size_u:size_u + size_v].ravel() * norm_ui
         U.append(Ui)
         V.append(Vi)
-    U = np.hstack(U)
-    V = np.hstack(V)
-    if n_task == 1:
-        U = U[:, None]
-        V = V[:, None]
     return U, V 
 
 
@@ -238,9 +230,9 @@ def rank_one(X, Y, size_u, u0=None, v0=None,
     counter = 0
     for tmp in out:
         u, v = tmp
-        for i in range(u.shape[1]):
-            U[:, counter] = u[:, i]
-            V[:, counter] = v[:, i]
+        for i in range(len(u)):
+            U[:, counter] = u[i]
+            V[:, counter] = v[i]
             counter += 1
 
     return U, V

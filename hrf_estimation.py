@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import sparse, linalg, optimize
 from scipy.sparse import linalg as splinalg
-from joblib import Parallel, delayed
+from joblib import Parallel, delayed, cpu_count
 
 __version__ = '0.3'
 
@@ -57,17 +57,17 @@ def rmatmat2(X, a, b, n_task):
 
 # .. some auxiliary functions ..
 # .. used in optimization ..
-def obj(X_, Y_, a, b, u0, size_u, size_v):
+def obj(X_, Y_, a, b, size_u, size_v):
     uv0 = khatri_rao(b, a)
     cost = .5 * linalg.norm(Y_ - X_.matvec(uv0), 'fro') ** 2
     return cost
 
-def f(w, X_, Y_, n_task, u0, size_u, size_v):
+def f(w, X_, Y_, n_task, size_u, size_v):
     W = w.reshape((-1, 1), order='F')
     u, v = W[:size_u], W[size_u:size_u + size_v]
-    return obj(X_, Y_, u, v, u0, size_u, size_v)
+    return obj(X_, Y_, u, v, size_u, size_v)
 
-def fprime(w, X_, Y_, n_task, u0, size_u, size_v):
+def fprime(w, X_, Y_, n_task, size_u, size_v):
     n_task = 1
     W = w.reshape((-1, 1), order='F')
     u, v = W[:size_u], W[size_u:size_u + size_v]
@@ -78,7 +78,7 @@ def fprime(w, X_, Y_, n_task, u0, size_u, size_v):
     return - grad.reshape((-1,), order='F')
 
 
-def hess(w, s, X_, Y_, n_task, u0, size_u, size_v):
+def hess(w, s, X_, Y_, n_task, size_u, size_v):
     # TODO: regularization
     s = s.reshape((-1, 1))
     X_ = splinalg.aslinearoperator(X_)
@@ -116,40 +116,51 @@ def hess(w, s, X_, Y_, n_task, u0, size_u, size_v):
     return out
 
 
-def _rank_one_inner_loop(X, y_i, callback, i, maxiter, method,
-                         n_task, rtol, size_u, size_v, u0, verbose, w0):
+def _rank_one_inner_loop(X, y_i, callback, maxiter, method,
+                         n_task, rtol, size_u, size_v, verbose, w0):
+    # np.save('y_i.npy', y_i)
+    # np.save('X', X.toarray())
     X = splinalg.aslinearoperator(X)
-    # tmp fix, create zero operator
-    w0_i = w0[:, i].ravel('F')
-    u0_i = u0[:, i].reshape((-1, 1))
-    args = (X, y_i, 1, u0_i, size_u, size_v)
-    options = {'maxiter': maxiter, 'xtol': rtol,
-               'verbose': verbose}
-    if int(verbose) > 1:
-        options['disp'] = 5
-    out = optimize.minimize(
-        f, w0_i, jac=fprime, args=args, hessp=hess,
-        method=method, options=options,
-        callback=callback)
-    if verbose:
-        print('Finished problem %s out of %s' % (i + 1, n_task))
-        if hasattr(out, 'nit'):
-            print('Number of iterations: %s' % out.nit)
-        if hasattr(out, 'fun'):
-            print('Loss function: %s' % out.fun)
-    out = out.x
-    W = out.reshape((-1, y_i.shape[1]), order='F')
-    ui = W[:size_u].ravel()
-    norm_ui = linalg.norm(ui)
-    Ui = ui / norm_ui
-    Vi = W[size_u:size_u + size_v].ravel() * norm_ui
-    Ci = W[size_u + size_v:].ravel()
-    return Ui, Vi, Ci
+    n_task = y_i.shape[1]
+    w0 = np.random.randn((size_u + size_v))
+    U = []
+    V = []
+    for i in range(n_task):
+        args = (X, y_i[:, i][:, None], 1, size_u, size_v)
+        options = {'maxiter': maxiter, 'xtol': rtol,
+                   'verbose': verbose}
+        if int(verbose) > 1:
+            options['disp'] = 5
+        out = optimize.minimize(
+            f, w0, jac=fprime, args=args, hessp=hess,
+            method=method, options=options,
+            callback=callback)
+        if verbose:
+            print('Finished problem %s out of %s' % (i + 1, n_task))
+            if hasattr(out, 'nit'):
+                print('Number of iterations: %s' % out.nit)
+            if hasattr(out, 'fun'):
+                print('Loss function: %s' % out.fun)
+        import ipdb; ipdb.set_trace()
+        out = out.x
+        w0 = out # use as warm restart
+        ui = out[:size_u].ravel()
+        norm_ui = linalg.norm(ui)
+        Ui = ui / norm_ui
+        Vi = out[size_u:size_u + size_v].ravel() * norm_ui
+        U.append(Ui)
+        V.append(Vi)
+    U = np.hstack(U)
+    V = np.hstack(V)
+    if n_task == 1:
+        U = U[:, None]
+        V = V[:, None]
+    return U, V 
 
 
 def rank_one(X, Y, size_u, u0=None, v0=None,
              rtol=1e-6, verbose=False, maxiter=1000, callback=None,
-             method='TNC', n_jobs=1):
+             method='L-BFGS-B', n_jobs=1):
     """
      multi-target rank one model
 
@@ -214,21 +225,25 @@ def rank_one(X, Y, size_u, u0=None, v0=None,
     V = np.zeros((size_v, n_task))
     C = np.zeros((1, n_task))
 
+    if n_jobs == -1:
+        n_jobs = cpu_count()
+    Y_split = np.array_split(Y, n_jobs, axis=1)
+
     out = Parallel(n_jobs=n_jobs)(
         delayed(_rank_one_inner_loop)(
-            X, Y[:, i][:, None], callback, i, maxiter,
-            method, n_task, rtol, size_u, size_v, u0, verbose, w0)
-        for i in range(Y.shape[1]))
+            X, y_i, callback, maxiter,
+            method, n_task, rtol, size_u, size_v, verbose, w0)
+        for y_i in Y_split)
 
-    for i in range(Y.shape[1]):
-        tmp = out[i]
-        U[:, i] = tmp[0]
-        V[:, i] = tmp[1]
+    counter = 0
+    for tmp in out:
+        u, v = tmp
+        for i in range(u.shape[1]):
+            U[:, counter] = u[:, i]
+            V[:, counter] = v[:, i]
+            counter += 1
 
-    if Z is None:
-        return U, V
-    else:
-        return U, V, C
+    return U, V
 
 
 
@@ -240,7 +255,7 @@ if __name__ == '__main__':
     B = np.dot(u_true, v_true.T)
     y = X.dot(B.ravel('F')) + .1 * np.random.randn(X.shape[0])
     #y = np.array([i * y for i in range(1, 3)]).T
-    u, v, w = rank_one(X.A, y, size_u, verbose=True, rtol=1e-10)
+    u, v = rank_one(X.A, y, size_u, verbose=True, rtol=1e-10)
 
     import pylab as plt
     plt.matshow(B)

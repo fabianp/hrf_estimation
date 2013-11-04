@@ -57,28 +57,30 @@ def rmatmat2(X, a, b, n_task):
 
 # .. some auxiliary functions ..
 # .. used in optimization ..
-def obj(X_, Y_, a, b, size_u, size_v):
-    uv0 = khatri_rao(b, a)
+def obj(X_, Y_, u, v, size_u, size_v, alpha, u0):
+    uv0 = khatri_rao(v, u)
     cost = .5 * linalg.norm(Y_ - X_.matvec(uv0), 'fro') ** 2
+    if alpha != 0.:
+        cost += 0.5 * (linalg.norm(u - u0) ** 2)
     return cost
 
-def f(w, X_, Y_, n_task, size_u, size_v):
+def f(w, X_, Y_, n_task, size_u, size_v, alpha, u0):
     W = w.reshape((-1, 1), order='F')
     u, v = W[:size_u], W[size_u:size_u + size_v]
-    return obj(X_, Y_, u, v, size_u, size_v)
+    return obj(X_, Y_, u, v, size_u, size_v, alpha, u0)
 
-def fprime(w, X_, Y_, n_task, size_u, size_v):
+def fprime(w, X_, Y_, n_task, size_u, size_v, alpha, u0):
     n_task = 1
     W = w.reshape((-1, 1), order='F')
     u, v = W[:size_u], W[size_u:size_u + size_v]
     tmp = Y_ - matmat2(X_, u, v, 1)
     grad = np.empty((size_u + size_v, 1))  # TODO: do outside
-    grad[:size_u] = rmatmat1(X_, v, tmp, 1)
+    grad[:size_u] = rmatmat1(X_, v, tmp, 1) + alpha * (u - u0)
     grad[size_u:size_u + size_v] = rmatmat2(X_, u, tmp, 1)
     return - grad.reshape((-1,), order='F')
 
 
-def hess(w, s, X_, Y_, n_task, size_u, size_v):
+def hess(w, s, X_, Y_, n_task, size_u, size_v, alpha, u0):
     # TODO: regularization
     s = s.reshape((-1, 1))
     X_ = splinalg.aslinearoperator(X_)
@@ -117,14 +119,14 @@ def hess(w, s, X_, Y_, n_task, size_u, size_v):
 
 
 def _rank_one_inner_loop(X, y_i, callback, maxiter, method,
-                         n_task, rtol, size_u, size_v, verbose, w0):
+                         n_task, rtol, size_u, size_v, verbose, w0, alpha, u0):
     X = splinalg.aslinearoperator(X)
     n_task = y_i.shape[1]
     w0 = np.random.randn((size_u + size_v))
     U = []
     V = []
     for i in range(n_task):
-        args = (X, y_i[:, i][:, None], 1, size_u, size_v)
+        args = (X, y_i[:, i][:, None], 1, size_u, size_v, alpha, u0)
         options = {'maxiter': maxiter, 'xtol': rtol,
                    'verbose': verbose}
         if int(verbose) > 1:
@@ -150,7 +152,7 @@ def _rank_one_inner_loop(X, y_i, callback, maxiter, method,
     return U, V 
 
 
-def rank_one(X, Y, size_u, u0=None, v0=None,
+def rank_one(X, Y, size_u, alpha=0., u0=None,
              rtol=1e-6, verbose=False, maxiter=1000, callback=None,
              method='L-BFGS-B', n_jobs=1):
     """
@@ -198,14 +200,11 @@ def rank_one(X, Y, size_u, u0=None, v0=None,
     if X.shape[0] != Y.shape[0]:
         raise ValueError('Wrong shape for X, y')
 
-    if u0 is None:
-        u0 = np.ones((size_u, n_task))
-    if u0.size == size_u:
-        u0 = u0.reshape((-1, 1))
-        u0 = np.repeat(u0, n_task, axis=1)
-    if v0 is None:
-        v0 = np.ones(X.shape[1] / size_u * n_task)  # np.random.randn(shape_B[1])
+    u0 = np.ones((size_u, 1))
+    if u0.ndim == 1:
+        u0 = u0[:, None]
 
+    v0 = np.ones(X.shape[1] / size_u * n_task)  # np.random.randn(shape_B[1])
     size_v = X.shape[1] / size_u
     #u0 = u0.reshape((-1, n_task))
     v0 = v0.reshape((-1, n_task))
@@ -224,7 +223,7 @@ def rank_one(X, Y, size_u, u0=None, v0=None,
     out = Parallel(n_jobs=n_jobs)(
         delayed(_rank_one_inner_loop)(
             X, y_i, callback, maxiter,
-            method, n_task, rtol, size_u, size_v, verbose, w0)
+            method, n_task, rtol, size_u, size_v, verbose, w0, alpha, u0)
         for y_i in Y_split)
 
     counter = 0

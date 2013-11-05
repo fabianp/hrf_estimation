@@ -152,7 +152,7 @@ def _rank_one_inner_loop(X, y_i, callback, maxiter, method,
     return U, V 
 
 
-def rank_one(X, Y, size_u, alpha=0., u0=None,
+def rank_one(X, Y, size_u, can_hrf, alpha=0., u0=None,
              rtol=1e-6, verbose=False, maxiter=1000, callback=None,
              method='L-BFGS-B', n_jobs=1):
     """
@@ -182,7 +182,11 @@ def rank_one(X, Y, size_u, alpha=0., u0=None,
          maximum number of iterations
 
      verbose : {0, 1, 2}
-         Different levels of verbosity
+        Different levels of verbosity
+
+    method: {'L-BFGS-B', 'TNC', 'CG'}
+        Different solvers. All should yield the same result but their efficiency
+        might vary.
 
      Returns
      -------
@@ -234,7 +238,10 @@ def rank_one(X, Y, size_u, alpha=0., u0=None,
             V[:, counter] = v[i]
             counter += 1
 
-    return U, V
+    # normalize
+    sign = np.sign(U.T.dot(can_hrf))
+    norm = sign * np.sqrt((U * U).sum(0))
+    return U / norm, V * norm
 
 
 
@@ -246,7 +253,8 @@ if __name__ == '__main__':
     B = np.dot(u_true, v_true.T)
     y = X.dot(B.ravel('F')) + .1 * np.random.randn(X.shape[0])
     #y = np.array([i * y for i in range(1, 3)]).T
-    u, v = rank_one(X.A, y, size_u, verbose=True, rtol=1e-10)
+    u, v = rank_one(X.A, y, size_u, np.random.randn(size_u),
+                    verbose=True, rtol=1e-10)
 
     import pylab as plt
     plt.matshow(B)

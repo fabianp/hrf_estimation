@@ -128,14 +128,16 @@ def _rank_one_inner_loop(X, y_i, callback, maxiter, method,
     for i in range(n_task):
         # import ipdb; ipdb.set_trace()
         args = (X, y_i[:, i, np.newaxis], 1, size_u, size_v, alpha, u0)
-        options = {'maxiter': maxiter, 'xtol': rtol,
-                   'verbose': verbose}
+        options = {'maxiter': maxiter, 'verbose': verbose}
         if int(verbose) > 1:
             options['disp'] = 5
+        kwargs = {}
+        if method == 'Newton-CG':
+            kwargs['hessp'] = hess
         out = optimize.minimize(
-            f, w0, jac=fprime, args=args, hessp=hess,
+            f, w0, jac=fprime, args=args,
             method=method, options=options,
-            callback=callback)
+            callback=callback, tol=rtol, **kwargs)
         assert out.success
         if verbose:
             print('Finished problem %s out of %s' % (i + 1, n_task))

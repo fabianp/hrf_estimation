@@ -138,7 +138,8 @@ def _rank_one_inner_loop(X, y_i, callback, maxiter, method,
             f, w0, jac=fprime, args=args,
             method=method, options=options,
             callback=callback, tol=rtol, **kwargs)
-        assert out.success
+        if not out.success:
+            warnings.warn(out.message)
         if verbose:
             print('Finished problem %s out of %s' % (i + 1, n_task))
             if hasattr(out, 'nit'):

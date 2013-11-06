@@ -2,6 +2,7 @@ import numpy as np
 from scipy import sparse, linalg, optimize
 from scipy.sparse import linalg as splinalg
 from joblib import Parallel, delayed, cpu_count
+import warnings
 
 __version__ = '0.3'
 

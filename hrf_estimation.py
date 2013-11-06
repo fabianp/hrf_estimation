@@ -126,7 +126,8 @@ def _rank_one_inner_loop(X, y_i, callback, maxiter, method,
     U = []
     V = []
     for i in range(n_task):
-        args = (X, y_i[:, i][:, None], 1, size_u, size_v, alpha, u0)
+        # import ipdb; ipdb.set_trace()
+        args = (X, y_i[:, i, np.newaxis], 1, size_u, size_v, alpha, u0)
         options = {'maxiter': maxiter, 'xtol': rtol,
                    'verbose': verbose}
         if int(verbose) > 1:
@@ -135,20 +136,21 @@ def _rank_one_inner_loop(X, y_i, callback, maxiter, method,
             f, w0, jac=fprime, args=args, hessp=hess,
             method=method, options=options,
             callback=callback)
+        assert out.success
         if verbose:
             print('Finished problem %s out of %s' % (i + 1, n_task))
             if hasattr(out, 'nit'):
                 print('Number of iterations: %s' % out.nit)
             if hasattr(out, 'fun'):
                 print('Loss function: %s' % out.fun)
-        out = out.x
-        w0 = out # use as warm restart
-        ui = out[:size_u].ravel()
-        norm_ui = linalg.norm(ui)
-        Ui = ui / norm_ui
-        Vi = out[size_u:size_u + size_v].ravel() * norm_ui
-        U.append(Ui)
-        V.append(Vi)
+        w0[:] = out.x.copy() # use as warm 
+        ui = out.x[:size_u].ravel()
+        vi = out.x[size_u:size_u + size_v].ravel()
+        norm = linalg.norm(ui)
+        U.append(ui / norm)
+        V.append(vi * norm)
+        w0[:size_u] /= norm
+        w0[size_u:] *= norm
     return U, V 
 
 
@@ -240,7 +242,7 @@ def rank_one(X, Y, size_u, can_hrf, alpha=0., u0=None,
 
     # normalize
     sign = np.sign(U.T.dot(can_hrf))
-    norm = sign * np.sqrt((U * U).sum(0))
+    norm = sign * np.sqrt((U * U).sum(0)) # norming twice ?
     return U / norm, V * norm
 
 

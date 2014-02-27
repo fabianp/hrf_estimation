@@ -1,6 +1,7 @@
 
 import hrf_estimation
 from distutils.core import setup
+import setuptools
 
 CLASSIFIERS = """\
 Development Status :: 5 - Production/Stable

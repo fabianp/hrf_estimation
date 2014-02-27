@@ -253,9 +253,12 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
 
     Parameters
     ----------
+
     conditions: array-like, shape (n_trials)
+        array of conditions
 
     onsets: array-like, shape (n_trials)
+        array of onsets
 
     TR: float
         Repetition Time, the delay between two succesive

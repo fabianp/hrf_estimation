@@ -6,6 +6,8 @@
 Welcome to hrf_estimation's documentation!
 ==========================================
 
+The main function in the package is called `hrf_estimation.glm` and will extract the
+HRF and activation coefficients from BOLD signal. Its signature is
 
 .. autofunction:: hrf_estimation.glm
 

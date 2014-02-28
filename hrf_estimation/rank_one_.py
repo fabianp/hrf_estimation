@@ -270,7 +270,8 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
     mode: {'r1glm', 'r1glms', 'glms', 'glm'}
         Different GLM models.
 
-    ref_hrf: XXX
+    ref_hrf: string or callable
+        Reference HRF
 
     rtol : float
         Relative tolerance for stopping criterion.

@@ -7,7 +7,6 @@ import warnings
 import hrf
 import utils
 from utils import create_design_matrix
-from tensor_decomp import cpd_als
 
 
 def IaXb(X, a, b):

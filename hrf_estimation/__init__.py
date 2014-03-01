@@ -5,4 +5,4 @@ import rank_one_separate
 import hrf
 import tensor_decomp
 
-__version__ = '0.4.1'
+__version__ = '0.4.3'

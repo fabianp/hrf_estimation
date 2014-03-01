@@ -4,7 +4,6 @@ import numpy as np
 from scipy.linalg import lstsq
 from math import factorial
 from scipy.ndimage import convolve1d
-from scipy.signal._arraytools import axis_slice
 
 
 def savgol_coeffs(window_length, polyorder, deriv=0, delta=1.0, pos=None,
@@ -165,6 +164,11 @@ def _fit_edge(x, window_start, window_stop, interp_start, interp_stop,
     """
 
     # Get the edge into a (window_length, -1) array.
+    try:
+        from scipy.signal._arraytools import axis_slice
+    except ImportError:
+        raise ImportError('Your scipy installation seems to be outdated, '
+                          'cant import scipy.signal._arraytools')
     x_edge = axis_slice(x, start=window_start, stop=window_stop, axis=axis)
     if axis == 0 or axis == -x.ndim:
         xx_edge = x_edge

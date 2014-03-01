@@ -5,7 +5,7 @@ This is a Python package that implements several methods for the
 joint estimation of HRF and activation patterns (aka beta-map) from
 fMRI (BOLD) signal.
 
-If you use this software, please cite one of the following papers
+If you use this software, please cite (at least) one of the following papers
 
 "Data-driven HRF estimation for encoding and decoding models",
 Fabian Pedregosa, Michael Eickenberg, Philippe Ciuciu, Bertrand Thirion and

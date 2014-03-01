@@ -19,7 +19,7 @@ Alexandre Gramfort. URL: http://hal.inria.fr/hal-00821946/en
 .. image:: https://raw.github.com/fabianp/hrf_estimation/master/doc/estimation_natural_images.png
 
 
-Get the code
+Installation
 ------------
 
 hrf_estimation is a pure Python package and can be installed through the Python Package Index (PYPI):

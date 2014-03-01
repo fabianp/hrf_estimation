@@ -329,10 +329,8 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
         from joblib import Memory
         memory = Memory(cachedir='', verbose=1)
         _create_design_matrix = memory.cache(create_design_matrix)
-        _cpd_als = memory.cache(cpd_als)
     else:
         _create_design_matrix = create_design_matrix
-        _cpd_als = cpd_als
 
     X_design, Q = _create_design_matrix(
         conditions, onsets, TR, n_scans, basis, oversample, hrf_length)
@@ -371,23 +369,10 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
         # XXX init glm
         W_init = np.random.randn(size_u + 2 * size_v, n_task)
     else:
-        raise NotImplementedError
+        W_init = np.random.randn(size_u + size_v)
 
 
-    if mode == 'r1glm_cpd':
-        if verbose:
-            print('.. computing tensor decomposition ..')
-        A, B, C, _ = _cpd_als(
-            X_design.reshape((n_scans, size_u, size_v), order='F'),
-            size_u * size_v, orthogonality=[0, 0, 0], verbose=2,
-            maxiter=100)
-        Q0, R = linalg.qr(A, mode='economic')
-        Y = Q0.T.dot(Y)
-        cpd = (R, C, B)
-        mode = 'r1glm'
-    else:
-        cpd = None
-
+    cpd = None  # XXX remove
     if mode == 'glms':
         U, V = utils.glms_from_glm(
             X_design, Q, ref_hrf, n_jobs, False, Y)

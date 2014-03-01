@@ -98,7 +98,6 @@ def compute_correlation(betas, hrfs, scatt_stim, fir_matrix, train, test, test_b
     assert betas.shape[1] == hrfs.shape[1]
     # fit ridge on given betas
     ridge = linear_model.RidgeCV()
-    import ipdb; ipdb.set_trace()
     beta_preds = ridge.fit(
         scatt_stim[train], betas).predict(scatt_stim[test])
     beta_pred_times_hrf = (beta_preds[:, np.newaxis, :] *
@@ -159,7 +158,6 @@ for n_sess in range(5):
     # cross-validation folds
     cv_bold = cross_validation.KFold(voxels.shape[0], 5)
     cv = cross_validation.KFold(event_matrix.shape[1] * 5, 5)
-    import ipdb; ipdb.set_trace()
 
     #.. GLM with rank-1 constraint ..
     hrfs = []
@@ -189,7 +187,8 @@ for n_sess in range(5):
             hrfs_train = np.mean(hrfs_train, 0)
             hrfs_train /= hrfs_train.max(0)
         else:
-            raise NotImplementedError
+            hrfs_train = np.mean(hrfs_train, 0).mean(1)
+            hrfs_train /= hrfs_train.max(0)
         betas_train = np.concatenate(betas_train)
 
         # encoding step

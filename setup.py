@@ -24,7 +24,7 @@ setup(
     author='Fabian Pedregosa',
     author_email='fabian@fseoane.net',
     url='https://pypi.python.org/pypi/hrf_estimation',
-    py_modules=['hrf_estimation'],
+    packages=['hrf_estimation'],
     classifiers=[_f for _f in CLASSIFIERS.split('\n') if _f],
     license='Simplified BSD'
 )

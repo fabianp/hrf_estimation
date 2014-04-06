@@ -160,6 +160,18 @@ def rank_one(X, y_i, size_u,  w_i, callback=None, maxiter=100,
     """
     Parameters
     ----------
+    X : array-like
+        Design matrix
+
+    y_i: array-like
+        BOLD signal
+
+    size_u : int
+        size of the HRF
+
+    w_i : array-like
+        initial point
+
     method: {'L-BFGS-B', 'TNC'}
     """
     n_task = y_i.shape[1]
@@ -305,9 +317,6 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
         the raw coefficients of the HRF in terms of the basis. Only
         returned if return_raw_U=True
 
-    References
-    ----------
-    XXX
     """
     if not mode in ('glm', 'r1glm', 'r1glm_cpd', 'r1glms', 'glms'):
         raise NotImplementedError

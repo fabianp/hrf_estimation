@@ -13,7 +13,7 @@ Dependencies:
 
 Examples:
 
-    %run encoding_natural_images.py -m r1glm_fir -j -1
+    %run encoding_natural_images.py -m r1glm -b fir -j -1
 
 will run a glm Rank-1 model with a FIR basis. This will create two .npy files
 containing the correlation scores and the generated HRFs
@@ -22,13 +22,13 @@ The available options are:
 
     -m : model to use. Available options are:
         glm : GLM with canonical HRF
-        glm_hrf : GLM + derivatives
-        glm_fir: GLM FIR
-        glm_r1_hrf : Rank-1 estimated HRF
-        glm_r1_fir : Rank-1 estimated HRF
         glms : GLM with separate designs
-        glms_hrf
-        glms_fir
+        glm_r1 : Rank-1 estimated HRF
+
+    -b: basis to use
+        hrf : fixed hrf
+        dhrf: hrf + temporal and dispersion derivatives (3 elements)
+        fir: FIR basis
 
     -j : number of cpu to use (-1 means all)
 
@@ -181,6 +181,7 @@ for n_sess in range(5):
                 hrf_length=hrf_length, basis=options.basis,
                 verbose=0, n_jobs=n_jobs, maxiter=100,
                 mode=options.mode, cache=True)
+
             hrfs_train.append(hrfs_train_i)
             betas_train.append(betas_train_i)
         if options.mode.startswith('r1'):

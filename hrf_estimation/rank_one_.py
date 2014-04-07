@@ -256,11 +256,11 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
         - r1glm: Rank-1 GLM
         - r1glms: Rank-1 GLM with separate designs
 
-
     basis:
 
         - hrf: single element basis
         - dhrf: basis with 3 elements
+        - fir: basis with 20 elements (in multiples of TR)
 
     Parameters
     ----------

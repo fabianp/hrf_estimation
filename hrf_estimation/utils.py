@@ -22,7 +22,7 @@ def create_design_matrix(conditions, onsets, TR, n_scans, basis='dhrf',
         basis = [hrf.spmt]
     elif basis == 'fir':
         basis = []
-        for i in range(20):
+        for i in range(20. / TR):
             tmp = functools.partial(hrf.fir, i=i, TR=TR)
             # import pylab as pl
             # xx = np.linspace(0, 20)

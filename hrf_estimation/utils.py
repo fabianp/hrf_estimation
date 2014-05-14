@@ -190,7 +190,7 @@ def glms_from_glm(glm_design, Q, ref_hrf, n_jobs, return_w, voxels):
 def glm_separate(event_matrix, Q, voxels, hrf_function, n_jobs=1,
                  return_w=False, downsample=1):
     """
-    Perform a GLM with separate designs
+    Perform a GLM with separate designs from an event matrix
     """
     if sparse.issparse(event_matrix):
         event_matrix = event_matrix.toarray()

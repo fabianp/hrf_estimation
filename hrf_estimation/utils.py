@@ -150,6 +150,9 @@ def _separate_innerloop(glms_design, n_basis, voxels):
 
 
 def glms_from_glm(glm_design, Q, ref_hrf, n_jobs, return_w, voxels):
+    """
+    Needs a numpy array (no sparse matrix) as input
+    """
     n_basis = Q.shape[1]
     glms_design = classic_to_obo(glm_design, n_basis)
     if n_jobs == -1:

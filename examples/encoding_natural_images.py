@@ -56,7 +56,7 @@ from sklearn import linear_model, cross_validation
 import hrf_estimation as he
 
 #.. constant parameters ..
-hrf_length = 30
+hrf_length = 20
 TR = 1.0
 DIR = os.path.dirname(os.path.realpath(__file__))
 

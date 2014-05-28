@@ -153,11 +153,13 @@ def f_grad_separate(w, X, Y, size_u, size_v):
     grad[:size_u] += u
     return norm, -grad
 
-def rank_one(X, y_i, size_u,  w_i, callback=None, maxiter=100,
-             method='L-BFGS-B',
+def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
+             method='L-BFGS-B', ref_hrf=None,
             rtol=1e-6,  verbose=0, mode='r1glm',
             cpd=None):
     """
+    Run a rank-one model with a given design matrix
+
     Parameters
     ----------
     X : array-like
@@ -174,17 +176,36 @@ def rank_one(X, y_i, size_u,  w_i, callback=None, maxiter=100,
 
     method: {'L-BFGS-B', 'TNC'}
     """
+    y_i = np.array(y_i)
     n_task = y_i.shape[1]
-    size_v = X.shape[1] // size_u
+    size_v = X.shape[1] // n_basis
     U = []
     V = []
+    if not sparse.issparse(X):
+        warnings.warn('Matrix X is not in sparse format. This method might be slow')
+    if w_i is None:
+        if mode == 'r1glm':
+            w_i = np.zeros((n_basis + size_v, n_task))
+            if sparse.issparse(X):
+                X_tmp = X.toarray()
+            else:
+                X_tmp = X
+            u0, v0 = utils.glms_from_glm(
+                X_tmp, np.eye(n_basis), ref_hrf, 1, False, y_i)
+            w_i[:n_basis] = u0.mean(1)
+            w_i[n_basis:] = v0
+        elif mode == 'r1glms':
+            w_i = np.random.randn(n_basis + 2 * size_v, n_task)
+
+        else:
+            raise NotImplementedError
     if mode == 'r1glms':
-        E = np.kron(np.ones((size_v, 1)), np.eye(size_u))
+        E = np.kron(np.ones((size_v, 1)), np.eye(n_basis))
         X_all = sparse.csr_matrix(X.dot(E))
         Xi = []
         Xi_all = []
         for j in range(size_v):  # iterate through trials
-            tmp = X[:, j*size_u:(j+1)*size_u]
+            tmp = X[:, j*n_basis:(j+1)*n_basis]
             Xi.append(tmp)
             Xi_all.append(X_all - tmp)
         X = (Xi, Xi_all)
@@ -196,7 +217,7 @@ def rank_one(X, y_i, size_u,  w_i, callback=None, maxiter=100,
             ofunc = f_cpd_grad
 
 
-    bounds = [(-1, 1)] * size_u + [(None, None)] * (w_i.shape[0] - size_u)
+    bounds = [(-1, 1)] * n_basis + [(None, None)] * (w_i.shape[0] - n_basis)
 
     if method == 'L-BFGS-B':
         solver = optimize.fmin_l_bfgs_b
@@ -205,7 +226,7 @@ def rank_one(X, y_i, size_u,  w_i, callback=None, maxiter=100,
 
 
     for i in range(n_task):
-        args = [X, y_i[:, i], size_u, size_v]
+        args = [X, y_i[:, i], n_basis, size_v]
         if cpd is not None:
             args[0] = cpd
         options = {'maxiter': maxiter}
@@ -230,10 +251,21 @@ def rank_one(X, y_i, size_u,  w_i, callback=None, maxiter=100,
                 if hasattr(out, 'fun'):
                     print('Loss function: %s' % out.fun)
         # w_i[:] = out.x.copy()  # use as warm restart
-        ui = out[0][:size_u].ravel()
-        vi = out[0][size_u:size_u + size_v].ravel()
+        ui = out[0][:n_basis].ravel()
+        vi = out[0][n_basis:n_basis + size_v].ravel()
         U.append(ui)
         V.append(vi)
+
+    U = np.array(U).T
+    V = np.array(V).T
+    if ref_hrf is None:
+        raise ValueError('Need a reference HRF')
+    sign = np.sign(U.T.dot(ref_hrf))
+    U *= sign
+    V *= sign
+    norm = U.max(0)  # (U.max(0) - U.min(0)) # norming twice ?
+    U = U / norm
+    V = V * norm
 
     return U, V
 
@@ -321,14 +353,21 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
     if not mode in ('glm', 'r1glm', 'r1glm_cpd', 'r1glms', 'glms'):
         raise NotImplementedError
     conditions = np.asarray(conditions)
-    oonsets = np.asarray(onsets)
+    onsets = np.asarray(onsets)
     if conditions.size != onsets.size:
         raise ValueError('array conditions and onsets should have the same size')
     Y = np.asarray(Y)
     n_scans = Y.shape[0]
     # XXX basis tolower
     if ref_hrf == 'spm':
-        ref_hrf = hrf.spmt(np.arange(0, hrf_length, TR))
+        canonical_full = hrf.spmt(np.arange(0, hrf_length, TR))
+        if basis == 'fir':
+            ref_hrf = canonical_full
+        elif basis == 'dhrf':
+            if mode in ('glm', 'glms'):
+                ref_hrf = canonical_full
+            else:
+                ref_hrf = np.array([1, 0, 0])
     verbose = int(verbose)
     if verbose > 0:
         print('.. creating design matrix ..')
@@ -360,11 +399,11 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
         # XXX basis
         if mode == 'r1glms':
             U_init, V_init, Z_init = utils.glms_from_glm(
-                X_design, Q, ref_hrf, n_jobs, True, Y
+                X_design, Q, canonical_full, n_jobs, True, Y
             )
         else:
             U_init, V_init = utils.glms_from_glm(
-                X_design, Q, ref_hrf, n_jobs, False, Y)
+                X_design, Q, canonical_full, n_jobs, False, Y)
 
         U_init = U_init.mean(1)
         U_init /= np.sqrt((U_init * U_init).sum(0))
@@ -398,12 +437,14 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
             delayed(rank_one)(
                 X_design, y_i, size_u, w_i, callback=callback, maxiter=maxiter,
                 method=method, rtol=rtol, verbose=verbose, mode=mode,
-                cpd=cpd)
+                cpd=cpd, ref_hrf=ref_hrf)
             for y_i, w_i in zip(Y_split, W_init_split))
 
         counter = 0
         for tmp in out:
             u, v = tmp
+            u = u.T
+            v = v.T
             for i in range(len(u)):
                 U[:, counter] = u[i]
                 V[:, counter] = v[i]
@@ -412,12 +453,6 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
         raw_U = U.copy()
         U = Q.dot(U)
         # normalize
-        sign = np.sign(U.T.dot(ref_hrf))
-        U *= sign
-        V *= sign
-        norm = U.max(0)  # (U.max(0) - U.min(0)) # norming twice ?
-        U = U / norm
-        V = V * norm
     out = [U, V]
     if return_design_matrix:
         out.append(

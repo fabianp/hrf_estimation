@@ -150,6 +150,11 @@ def _separate_innerloop(glms_design, n_basis, voxels):
 
 
 def glms_from_glm(glm_design, Q, ref_hrf, n_jobs, return_w, voxels):
+    """
+    Performs a GLM-separate from a GLM design matrix as input
+
+    Needs a numpy array (no sparse matrix) as input
+    """
     n_basis = Q.shape[1]
     glms_design = classic_to_obo(glm_design, n_basis)
     if n_jobs == -1:
@@ -185,7 +190,7 @@ def glms_from_glm(glm_design, Q, ref_hrf, n_jobs, return_w, voxels):
 def glm_separate(event_matrix, Q, voxels, hrf_function, n_jobs=1,
                  return_w=False, downsample=1):
     """
-    Perform a GLM with separate designs
+    Perform a GLM with separate designs from an event matrix
     """
     if sparse.issparse(event_matrix):
         event_matrix = event_matrix.toarray()

@@ -21,7 +21,7 @@ If you have already formed the design matrix and only want to estimate a R1-GLM 
 Examples
 ========
 
-See this ipython notebook: 
+See this `ipython notebook <http://nbviewer.ipython.org/github/fabianp/hrf_estimation/blob/master/examples/hrf_estimation%20example.ipynb>`_
 
 
 .. toctree::

@@ -21,7 +21,7 @@ If you have already formed the design matrix and only want to estimate a R1-GLM 
 Examples
 ========
 
-Coming soon
+See this ipython notebook: 
 
 
 .. toctree::

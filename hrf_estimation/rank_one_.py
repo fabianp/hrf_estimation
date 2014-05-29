@@ -453,7 +453,7 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
         raw_U = U.copy()
         U = Q.dot(U)
         # normalize
-    norm = U.max(0)
+    norm = np.abs(U).max(0)
     U /= norm
     V *= norm
     out = [U, V]

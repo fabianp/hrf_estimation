@@ -6,4 +6,4 @@ import hrf
 import tensor_decomp
 import data
 
-__version__ = '0.5.0'
+__version__ = '0.5.1'

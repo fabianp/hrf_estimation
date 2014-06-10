@@ -176,16 +176,14 @@ def glms_from_glm(glm_design, Q, ref_hrf, n_jobs, return_w, voxels):
     full_betas = np.concatenate(betas, axis=1)
     full_w = np.concatenate(w, axis=1)
     hrfs = full_betas.T
-    hrfs = hrfs * sign[..., None]
     norm = np.sqrt((hrfs * hrfs).sum(-1))
     hrfs /= norm[..., None]
-    betas = norm * sign
+    betas = norm
     if return_w:
         hrfs_w = full_w.T.dot(Q.T)
         norm_w = np.sqrt((hrfs_w * hrfs_w).sum(-1))
-        sign_w = np.sign((hrfs_w * ref_hrf).sum(-1))
-        hrfs_w = hrfs_w * sign[..., None] / norm_w[..., None]
-        betas_w = norm_w * sign_w
+        hrfs_w = hrfs_w  / norm_w[..., None]
+        betas_w = norm_w
         return hrfs.T, betas.T, betas_w.T
     return hrfs.T, betas.T
 

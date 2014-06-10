@@ -363,7 +363,7 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
         canonical_full = hrf.spmt(np.arange(0, hrf_length, TR))
         if basis == 'fir':
             ref_hrf = canonical_full
-        elif basis == 'dhrf':
+        elif basis in('dhrf', 'hrf'):
             if mode in ('glm', 'glms'):
                 ref_hrf = canonical_full
             else:

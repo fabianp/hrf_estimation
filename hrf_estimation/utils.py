@@ -157,6 +157,8 @@ def glms_from_glm(glm_design, Q, ref_hrf, n_jobs, return_w, voxels):
     Performs a GLM-separate from a GLM design matrix as input
 
     Needs a numpy array (no sparse matrix) as input
+
+    **Note** output is unnormalized
     """
     n_basis = Q.shape[1]
     glms_design = classic_to_obo(glm_design, n_basis)
@@ -173,10 +175,8 @@ def glms_from_glm(glm_design, Q, ref_hrf, n_jobs, return_w, voxels):
         w.append(o[1])
     full_betas = np.concatenate(betas, axis=1)
     full_w = np.concatenate(w, axis=1)
-    hrfs = full_betas.T.dot(Q.T)
-    sign = np.sign((hrfs * ref_hrf).sum(-1))
+    hrfs = full_betas.T
     hrfs = hrfs * sign[..., None]
-    # norm = hrfs.max(-1)
     norm = np.sqrt((hrfs * hrfs).sum(-1))
     hrfs /= norm[..., None]
     betas = norm * sign

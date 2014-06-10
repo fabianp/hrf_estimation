@@ -68,32 +68,6 @@ def f_grad(w, X, Y, size_u, size_v):
     grad[size_u:size_u + size_v] = aIXb(X, u, res).ravel()
     return cost, -grad
 
-def f_cpd_obj(w, A, B, y, size_u):
-    """
-    .5 * ||y - A^T beta * B^T h||^2
-    """
-    h, beta = w[:size_u], w[size_u:]
-    A_beta = A.T.dot(beta)
-    B_h = B.T.dot(h)
-    residual = y - A_beta * B_h
-    cost = .5 * (residual * residual).sum()
-    cost -= .5 * (linalg.norm(u) ** 2)
-    return cost
-
-def f_cpd_grad(w, (R, A, B), y, size_u, size_v):
-    """Return function AND gradient"""
-    h, beta = w[:size_u], w[size_u:size_u+size_v]
-    A_beta = A.T.dot(beta)
-    B_h = B.T.dot(h)
-    residual = y - R.dot(A_beta * B_h)
-    cost = .5 * linalg.norm(residual) ** 2
-    cost -= .5 * (linalg.norm(h) ** 2)
-    R_residual = R.T.dot(residual)
-    grad_beta = - A.dot(B_h * R_residual)
-    grad_h = - B.dot(A_beta * R_residual) - h
-    grad = np.concatenate((grad_h, grad_beta))
-    return cost, grad
-
 def f_separate(w, X, Y, size_u, size_v, X_all):
     # for the GLM with separate designs
     u, v, z = w[:size_u], w[size_u:size_u + size_v], w[size_u + size_v:]
@@ -155,8 +129,7 @@ def f_grad_separate(w, X, Y, size_u, size_v):
 
 def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
              method='L-BFGS-B', ref_hrf=None,
-            rtol=1e-6,  verbose=0, mode='r1glm',
-            cpd=None):
+            rtol=1e-6,  verbose=0, mode='r1glm'):
     """
     Run a rank-one model with a given design matrix
 
@@ -211,10 +184,7 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
         X = (Xi, Xi_all)
         ofunc = f_grad_separate
     else:
-        if cpd is None:
-            ofunc = f_grad
-        else:
-            ofunc = f_cpd_grad
+        ofunc = f_grad
 
 
     bounds = [(-1, 1)] * n_basis + [(None, None)] * (w_i.shape[0] - n_basis)
@@ -227,8 +197,6 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
 
     for i in range(n_task):
         args = [X, y_i[:, i], n_basis, size_v]
-        if cpd is not None:
-            args[0] = cpd
         options = {'maxiter': maxiter}
         if int(verbose) > 1:
             options['disp'] = 5
@@ -258,15 +226,6 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
 
     U = np.array(U).T
     V = np.array(V).T
-    if ref_hrf is None:
-        raise ValueError('Need a reference HRF')
-    sign = np.sign(U.T.dot(ref_hrf))
-    U *= sign
-    V *= sign
-    norm = U.max(0)  # (U.max(0) - U.min(0)) # norming twice ?
-    U = U / norm
-    V = V * norm
-
     return U, V
 
 
@@ -293,6 +252,13 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
         - hrf: single element basis
         - dhrf: basis with 3 elements
         - fir: basis with 20 elements (in multiples of TR)
+
+    **Note** the output parameters need are not normalized. Note
+    that the methods here are specified up to a constant term between
+    the betas and the HRF. Typically the HRF is normalized to 
+    have unit amplitude and to correlate positively with a 
+    reference HRF.
+
 
     Parameters
     ----------
@@ -350,7 +316,7 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
         returned if return_raw_U=True
 
     """
-    if not mode in ('glm', 'r1glm', 'r1glm_cpd', 'r1glms', 'glms'):
+    if not mode in ('glm', 'r1glm', 'r1glms', 'glms'):
         raise NotImplementedError
     conditions = np.asarray(conditions)
     onsets = np.asarray(onsets)
@@ -419,7 +385,6 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
         W_init = np.random.randn(size_u + size_v)
 
 
-    cpd = None  # XXX remove
     if mode == 'glms':
         U, V = utils.glms_from_glm(
             X_design, Q, ref_hrf, n_jobs, False, Y)
@@ -436,8 +401,8 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
         out = Parallel(n_jobs=n_jobs)(
             delayed(rank_one)(
                 X_design, y_i, size_u, w_i, callback=callback, maxiter=maxiter,
-                method=method, rtol=rtol, verbose=verbose, mode=mode,
-                cpd=cpd, ref_hrf=ref_hrf)
+                method=method, rtol=rtol, verbose=verbose, mode=mode, 
+                ref_hrf=ref_hrf)
             for y_i, w_i in zip(Y_split, W_init_split))
 
         counter = 0
@@ -453,9 +418,6 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
         raw_U = U.copy()
         U = Q.dot(U)
         # normalize
-    norm = np.abs(U).max(0)
-    U /= norm
-    V *= norm
     out = [U, V]
     if return_design_matrix:
         out.append(

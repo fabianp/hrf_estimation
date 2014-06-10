@@ -416,7 +416,6 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
                 counter += 1
 
         raw_U = U.copy()
-        U = Q.dot(U)
         # normalize
     out = [U, V]
     if return_design_matrix:

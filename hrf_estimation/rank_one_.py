@@ -464,24 +464,3 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
     if return_raw_U:
         out.append(raw_U)
     return out
-
-
-if __name__ == '__main__':
-    size_u, size_v = 9, 48
-    X = sparse.csr_matrix(np.random.randn(100, size_u * size_v))
-    Z = np.random.randn(1000, 20)
-    u_true, v_true = np.random.rand(size_u, 2), 1 + .1 * np.random.randn(size_v, 2)
-    B = np.dot(u_true, v_true.T)
-    y = X.dot(B.ravel('F')) + .1 * np.random.randn(X.shape[0])
-    #y = np.array([i * y for i in range(1, 3)]).T
-    u, v = rank_one(X.A, y, size_u, np.random.randn(size_u),
-                    verbose=True, rtol=1e-10)
-
-    import pylab as plt
-    plt.matshow(B)
-    plt.title('Groud truth')
-    plt.colorbar()
-    plt.matshow(np.dot(u[:, :1], v[:, :1].T))
-    plt.title('Estimated')
-    plt.colorbar()
-    plt.show()

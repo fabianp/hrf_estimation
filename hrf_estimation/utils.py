@@ -146,9 +146,10 @@ def _separate_innerloop(glms_design, n_basis, voxels):
     betas = np.empty((n_basis, glms_design.shape[0], voxels.shape[-1]))
     w = np.empty_like(betas)
     for i in range(glms_design.shape[0]):
-        tmp = linalg.lstsq(glms_design[i], voxels)[0]
+        design = np.concatenate((glms_design[i], np.ones((voxels.shape[0], 1))))
+        tmp = linalg.lstsq(design, voxels)[0]
         betas[:, i, :] = tmp[:n_basis]
-        w[:, i, :] = tmp[n_basis:]
+        w[:, i, :] = tmp[n_basis:-1]
     return betas, w
 
 

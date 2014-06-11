@@ -42,30 +42,34 @@ def aIXb(X, a, b):
 
 def f_r1(w, X, Y, size_u, size_v):
     """Objective function for the rank-one FIR model"""
-    u, v = w[:size_u], w[size_u:size_u + size_v]
-    res = Y.ravel() - X.dot(np.outer(u, v).ravel('F')).ravel()
+    u, v, bias = w[:size_u], w[size_u:size_u + size_v], w[size_u + size_v:]
+    res = Y.ravel() - X.dot(np.outer(u, v).ravel('F')).ravel() - bias
     cost = .5 * linalg.norm(res) ** 2
     cost -= .5 * (linalg.norm(u) ** 2)
     return cost
 
 
 def fprime(w, X, Y, size_u, size_v):
-    u, v = w[:size_u], w[size_u:size_u + size_v]
-    res = Y.ravel() - X.dot(np.outer(u, v).ravel('F')).ravel()
-    grad = np.empty((size_u + size_v))
+    u, v, bias = w[:size_u], w[size_u:size_u + size_v], w[size_u + size_v:]
+    res = Y.ravel() - X.dot(np.outer(u, v).ravel('F')).ravel() - bias
+    grad = np.empty((size_u + size_v + 1))
     grad[:size_u] = IaXb(X, v, res).ravel() + u
     grad[size_u:size_u + size_v] = aIXb(X, u, res).ravel()
+    grad[size_u + size_v:] = np.sum(res)
     return - grad
 
 def f_grad(w, X, Y, size_u, size_v):
     """Returns function AND gradient"""
-    u, v = w[:size_u], w[size_u:size_u + size_v]
-    res = Y.ravel() - X.dot(np.outer(u, v).ravel('F')).ravel()
+    u, v, bias = w[:size_u], w[size_u:size_u + size_v], w[size_u + size_v:]
+    assert len(bias) == 1
+    res = Y.ravel() - X.dot(np.outer(u, v).ravel('F')).ravel() - bias
     cost = .5 * linalg.norm(res) ** 2
     cost -= .5 * (linalg.norm(u) ** 2)
-    grad = np.empty((size_u + size_v))
+    grad = np.empty((size_u + size_v + 1))
     grad[:size_u] = IaXb(X, v, res).ravel() + u
     grad[size_u:size_u + size_v] = aIXb(X, u, res).ravel()
+    grad[size_u + size_v:] = np.sum(res)
+    print(cost)
     return cost, -grad
 
 def f_separate(w, X, Y, size_u, size_v, X_all):
@@ -158,7 +162,7 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
         warnings.warn('Matrix X is not in sparse format. This method might be slow')
     if w_i is None:
         if mode == 'r1glm':
-            w_i = np.zeros((n_basis + size_v, n_task))
+            w_i = np.ones((n_basis + size_v + 1, n_task))
             if sparse.issparse(X):
                 X_tmp = X.toarray()
             else:
@@ -211,7 +215,7 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
         if verbose > 1 and not out[-1]['warnflag'] != 0:
             warnings.warn(out[-1]['task'])
         if int(verbose) > 0:
-            if ((i+1) % (n_task // 10)) == 0:
+            if ((i+1) % 500) == 0:
                 print('.. completed %s out of %s ..' % (i + 1, n_task))
             if verbose > 1:
                 if hasattr(out, 'nit'):
@@ -278,6 +282,9 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
 
     mode: {'r1glm', 'r1glms', 'glms', 'glm'}
         Different GLM models.
+
+    init: {'auto', 'glms', None}
+        What initialization to use.
 
     ref_hrf: string or callable
         Reference HRF
@@ -382,7 +389,7 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
         # XXX init glm
         W_init = np.random.randn(size_u + 2 * size_v, n_task)
     else:
-        W_init = np.random.randn(size_u + size_v)
+        W_init = np.random.randn(size_u + size_v + 1, n_task)
 
 
     if mode == 'glms':

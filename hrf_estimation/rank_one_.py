@@ -69,7 +69,6 @@ def f_grad(w, X, Y, size_u, size_v):
     grad[:size_u] = IaXb(X, v, res).ravel() + u
     grad[size_u:size_u + size_v] = aIXb(X, u, res).ravel()
     grad[size_u + size_v:] = np.sum(res)
-    print(cost)
     return cost, -grad
 
 def f_separate(w, X, Y, size_u, size_v, X_all):
@@ -132,7 +131,7 @@ def f_grad_separate(w, X, Y, size_u, size_v):
     return norm, -grad
 
 def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
-             method='L-BFGS-B', ref_hrf=None,
+             method='L-BFGS-B', 
             rtol=1e-6,  verbose=0, mode='r1glm'):
     """
     Run a rank-one model with a given design matrix
@@ -140,18 +139,25 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
     Parameters
     ----------
     X : array-like
-        Design matrix
+        Design matrix.
 
     y_i: array-like
-        BOLD signal
+        BOLD signal.
 
-    size_u : int
-        size of the HRF
+    n_basis : int
+        Number of basis elements in the HRF.
 
     w_i : array-like
-        initial point
+        initial point.
 
     method: {'L-BFGS-B', 'TNC'}
+
+    Returns
+    -------
+    U : array
+        Estimated HRFs
+    V : array
+        Estimated activation coefficients
     """
     y_i = np.array(y_i)
     n_task = y_i.shape[1]
@@ -168,7 +174,7 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
             else:
                 X_tmp = X
             u0, v0 = utils.glms_from_glm(
-                X_tmp, np.eye(n_basis), ref_hrf, 1, False, y_i)
+                X_tmp, np.eye(n_basis), 1, False, y_i)
             w_i[:n_basis] = u0.mean(1)
             w_i[n_basis:] = v0
         elif mode == 'r1glms':
@@ -234,7 +240,7 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
 
 
 def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
-        hrf_length=20, oversample=20, ref_hrf='spm',
+        hrf_length=20, oversample=20, 
         rtol=1e-8, verbose=False, maxiter=500, callback=None,
         method='L-BFGS-B', n_jobs=1, init='auto',
         return_design_matrix=False,
@@ -286,9 +292,6 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
     init: {'auto', 'glms', None}
         What initialization to use.
 
-    ref_hrf: string or callable
-        Reference HRF
-
     rtol : float
         Relative tolerance for stopping criterion.
 
@@ -331,16 +334,6 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
         raise ValueError('array conditions and onsets should have the same size')
     Y = np.asarray(Y)
     n_scans = Y.shape[0]
-    # XXX basis tolower
-    if ref_hrf == 'spm':
-        canonical_full = hrf.spmt(np.arange(0, hrf_length, TR))
-        if basis == 'fir':
-            ref_hrf = canonical_full
-        elif basis in('dhrf', 'hrf'):
-            if mode in ('glm', 'glms'):
-                ref_hrf = canonical_full
-            else:
-                ref_hrf = np.array([1, 0, 0])
     verbose = int(verbose)
     if verbose > 0:
         print('.. creating design matrix ..')
@@ -394,10 +387,10 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
 
     if mode == 'glms':
         U, V = utils.glms_from_glm(
-            X_design, Q, ref_hrf, n_jobs, False, Y)
+            X_design, Q, n_jobs, False, Y)
     elif mode == 'glm':
         U, V = utils.glm(
-            X_design, Q, Y, hrf_function=ref_hrf, convolve=False)
+            X_design, Q, Y, convolve=False)
     elif mode in ('r1glm', 'r1glms'):
         if n_jobs == -1:
             n_jobs = cpu_count()
@@ -408,8 +401,7 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
         out = Parallel(n_jobs=n_jobs)(
             delayed(rank_one)(
                 X_design, y_i, size_u, w_i, callback=callback, maxiter=maxiter,
-                method=method, rtol=rtol, verbose=verbose, mode=mode, 
-                ref_hrf=ref_hrf)
+                method=method, rtol=rtol, verbose=verbose, mode=mode)
             for y_i, w_i in zip(Y_split, W_init_split))
 
         counter = 0

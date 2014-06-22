@@ -9,7 +9,7 @@ from joblib import Parallel, delayed, cpu_count
 from . import hrf
 
 def create_design_matrix(conditions, onsets, TR, n_scans, basis='dhrf',
-                         oversample=100, hrf_length=30):
+                         oversample=100, hrf_length=20):
     """
     Parameters
     ----------
@@ -153,7 +153,7 @@ def _separate_innerloop(glms_design, n_basis, voxels):
     return betas, w
 
 
-def glms_from_glm(glm_design, Q, ref_hrf, n_jobs, return_w, voxels):
+def glms_from_glm(glm_design, Q, n_jobs, return_w, voxels):
     """
     Performs a GLM-separate from a GLM design matrix as input
 

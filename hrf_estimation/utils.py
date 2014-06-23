@@ -19,8 +19,10 @@ def create_design_matrix(conditions, onsets, TR, n_scans, basis='dhrf',
         repetition time
     n_scans: number of scans
     """
-    if basis == 'dhrf':
+    if basis == '3hrf':
         basis = [hrf.spmt, hrf.dspmt, hrf.ddspmt]
+    elif basis == '2hrf':
+        basis = [hrf.spmt, hrf.dspmt]
     elif basis == 'hrf':
         basis = [hrf.spmt]
     elif basis == 'fir':

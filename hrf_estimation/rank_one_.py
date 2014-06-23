@@ -69,7 +69,6 @@ def f_grad(w, X, Y, size_u, size_v):
     grad[:size_u] = IaXb(X, v, res).ravel() + u
     grad[size_u:size_u + size_v] = aIXb(X, u, res).ravel()
     grad[size_u + size_v:] = np.sum(res)
-    print(cost)
     return cost, -grad
 
 def f_separate(w, X, Y, size_u, size_v, X_all):
@@ -132,8 +131,7 @@ def f_grad_separate(w, X, Y, size_u, size_v):
     return norm, -grad
 
 def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
-             method='L-BFGS-B', ref_hrf=None,
-            rtol=1e-6,  verbose=0, mode='r1glm'):
+             method='L-BFGS-B', rtol=1e-6,  verbose=0, mode='r1glm'):
     """
     Run a rank-one model with a given design matrix
 
@@ -162,15 +160,8 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
         warnings.warn('Matrix X is not in sparse format. This method might be slow')
     if w_i is None:
         if mode == 'r1glm':
+            # XXX initialization
             w_i = np.ones((n_basis + size_v + 1, n_task))
-            if sparse.issparse(X):
-                X_tmp = X.toarray()
-            else:
-                X_tmp = X
-            u0, v0 = utils.glms_from_glm(
-                X_tmp, np.eye(n_basis), ref_hrf, 1, False, y_i)
-            w_i[:n_basis] = u0.mean(1)
-            w_i[n_basis:] = v0
         elif mode == 'r1glms':
             w_i = np.random.randn(n_basis + 2 * size_v, n_task)
 
@@ -233,12 +224,11 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
     return U, V
 
 
-def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
-        hrf_length=20, oversample=20, ref_hrf='spm',
-        rtol=1e-8, verbose=False, maxiter=500, callback=None,
-        method='L-BFGS-B', n_jobs=1, init='auto',
-        return_design_matrix=False,
-        return_raw_U=False, cache=False):
+def glm(conditions, onsets, TR, Y, basis='3hrf', mode='r1glm',
+        hrf_length=20, oversample=20, 
+        rtol=1e-8, verbose=False, maxiter=100, callback=None,
+        method='L-BFGS-B', n_jobs=1, 
+        return_design_matrix=False):
     """
     Perform a GLM from BOLD signal, given the conditons, onset,
     TR (repetition time of the scanner) and the BOLD signal.
@@ -254,12 +244,14 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
     basis:
 
         - hrf: single element basis
-        - dhrf: basis with 3 elements
-        - fir: basis with 20 elements (in multiples of TR)
+        - 3hrf: basis with 3 elements
+        - fir: basis with hrf_length elements (in multiples of TR)
 
-    **Note** the output parameters need are not normalized. Note
-    that the methods here are specified up to a constant term between
-    the betas and the HRF. Typically the HRF is normalized to 
+    **Note** the output parameters need are not normalized. 
+    Rank-1 models are specified up to a constant 
+    term between the betas and the HRF. This implies that some
+    normalization must be done prior to interpreting the activation
+    coefficients. Typically the HRF is normalized to 
     have unit amplitude and to correlate positively with a 
     reference HRF.
 
@@ -282,12 +274,6 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
 
     mode: {'r1glm', 'r1glms', 'glms', 'glm'}
         Different GLM models.
-
-    init: {'auto', 'glms', None}
-        What initialization to use.
-
-    ref_hrf: string or callable
-        Reference HRF
 
     rtol : float
         Relative tolerance for stopping criterion.
@@ -332,27 +318,11 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
     Y = np.asarray(Y)
     n_scans = Y.shape[0]
     # XXX basis tolower
-    if ref_hrf == 'spm':
-        canonical_full = hrf.spmt(np.arange(0, hrf_length, TR))
-        if basis == 'fir':
-            ref_hrf = canonical_full
-        elif basis in('dhrf', 'hrf'):
-            if mode in ('glm', 'glms'):
-                ref_hrf = canonical_full
-            else:
-                ref_hrf = np.array([1, 0, 0])
     verbose = int(verbose)
     if verbose > 0:
         print('.. creating design matrix ..')
-    if cache != False:
-        # XXX cache is a Memory object
-        from joblib import Memory
-        memory = Memory(cachedir='', verbose=1)
-        _create_design_matrix = memory.cache(create_design_matrix)
-    else:
-        _create_design_matrix = create_design_matrix
 
-    X_design, Q = _create_design_matrix(
+    X_design, Q = create_design_matrix(
         conditions, onsets, TR, n_scans, basis, oversample, hrf_length)
     if verbose > 0:
         print('.. done creating design matrix ..')
@@ -363,42 +333,26 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
 
     size_u = Q.shape[1]
     size_v = X_design.shape[1] // size_u
-    U = np.zeros((size_u, n_task))
-    V = np.zeros((size_v, n_task))
-
-    if init in ('auto', 'glms') and mode.startswith('r1glm'):
-        if verbose > 0:
-            print('.. computing initialization ..')
-        # XXX basis
-        if mode == 'r1glms':
-            U_init, V_init, Z_init = utils.glms_from_glm(
-                X_design, Q, canonical_full, n_jobs, True, Y
-            )
-        else:
-            U_init, V_init = utils.glms_from_glm(
-                X_design, Q, canonical_full, n_jobs, False, Y)
-
-        U_init = U_init.mean(1)
-        U_init /= np.sqrt((U_init * U_init).sum(0))
-        U_init = Q.T.dot(U_init)
-        if mode == 'r1glms':
-            W_init = np.concatenate((U_init, V_init, Z_init))
-        else:
-            W_init = np.concatenate((U_init, V_init))
-    elif mode.startswith('glms'):
-        # XXX init glm
-        W_init = np.random.randn(size_u + 2 * size_v, n_task)
-    else:
-        W_init = np.random.randn(size_u + size_v + 1, n_task)
-
 
     if mode == 'glms':
         U, V = utils.glms_from_glm(
-            X_design, Q, ref_hrf, n_jobs, False, Y)
+            X_design, Q, 'spm', n_jobs, False, Y)
     elif mode == 'glm':
         U, V = utils.glm(
-            X_design, Q, Y, hrf_function=ref_hrf, convolve=False)
+            X_design, Q, Y, hrf_function='spm', convolve=False)
     elif mode in ('r1glm', 'r1glms'):
+        U = np.zeros((size_u, n_task))
+        V = np.zeros((size_v, n_task))
+        if verbose > 0:
+            print('.. computing initialization ..')
+        X_design_canonical, Q_canonical = create_design_matrix(conditions, onsets, TR,
+            n_scans, [hrf.spmt], oversample, hrf_length)
+        X_design_canonical = np.concatenate(
+            (X_design_canonical, np.ones((n_scans, 1))), axis=1)
+        V_init = linalg.lstsq(X_design_canonical, Y)[0]
+        U_init = np.tile(linalg.lstsq(Q, Q_canonical)[0], n_task)
+        W_init = np.concatenate((U_init, V_init))
+
         if n_jobs == -1:
             n_jobs = cpu_count()
         Y_split = np.array_split(Y, n_jobs, axis=1)
@@ -408,8 +362,7 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
         out = Parallel(n_jobs=n_jobs)(
             delayed(rank_one)(
                 X_design, y_i, size_u, w_i, callback=callback, maxiter=maxiter,
-                method=method, rtol=rtol, verbose=verbose, mode=mode, 
-                ref_hrf=ref_hrf)
+                method=method, rtol=rtol, verbose=verbose, mode=mode)
             for y_i, w_i in zip(Y_split, W_init_split))
 
         counter = 0
@@ -429,6 +382,4 @@ def glm(conditions, onsets, TR, Y, basis='dhrf', mode='r1glm',
         out.append(
             np.rec.fromarrays(list(X_design.T),
                 names=",".join(np.unique(conditions))))
-    if return_raw_U:
-        out.append(raw_U)
     return out

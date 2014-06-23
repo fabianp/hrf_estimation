@@ -383,10 +383,10 @@ def glm(conditions, onsets, TR, Y, basis='3hrf', mode='r1glm',
 
         raw_U = U.copy()
         # normalize
-    if basis == '3hrf':
+    if mode == 'r1glm' and basis == '3hrf':
         xx = np.linspace(0, hrf_length * TR)
         generated_hrfs = U[0] * hrf.spmt(xx)[:, None] + \
-        U[1] * hrf.dspmt(xx)[:, None] + U[2] * hrf.ddspmt(xx)[:, None]
+            U[1] * hrf.dspmt(xx)[:, None] + U[2] * hrf.ddspmt(xx)[:, None]
         sign = np.sign(np.dot(generated_hrfs.T, hrf.spmt(xx)))
         norm = np.abs(generated_hrfs).max(0)
         U = U * sign / norm

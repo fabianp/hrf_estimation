@@ -138,18 +138,25 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
     Parameters
     ----------
     X : array-like
-        Design matrix
+        Design matrix.
 
     y_i: array-like
-        BOLD signal
+        BOLD signal.
 
-    size_u : int
-        size of the HRF
+    n_basis : int
+        Number of basis elements in the HRF.
 
     w_i : array-like
-        initial point
+        initial point.
 
     method: {'L-BFGS-B', 'TNC'}
+
+    Returns
+    -------
+    U : array
+        Estimated HRFs
+    V : array
+        Estimated activation coefficients
     """
     y_i = np.array(y_i)
     n_task = y_i.shape[1]
@@ -317,7 +324,6 @@ def glm(conditions, onsets, TR, Y, basis='3hrf', mode='r1glm',
         raise ValueError('array conditions and onsets should have the same size')
     Y = np.asarray(Y)
     n_scans = Y.shape[0]
-    # XXX basis tolower
     verbose = int(verbose)
     if verbose > 0:
         print('.. creating design matrix ..')
@@ -336,10 +342,10 @@ def glm(conditions, onsets, TR, Y, basis='3hrf', mode='r1glm',
 
     if mode == 'glms':
         U, V = utils.glms_from_glm(
-            X_design, Q, 'spm', n_jobs, False, Y)
+            X_design, Q, n_jobs, False, Y)
     elif mode == 'glm':
         U, V = utils.glm(
-            X_design, Q, Y, hrf_function='spm', convolve=False)
+            X_design, Q, Y, convolve=False)
     elif mode in ('r1glm', 'r1glms'):
         U = np.zeros((size_u, n_task))
         V = np.zeros((size_v, n_task))

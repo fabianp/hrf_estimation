@@ -311,10 +311,6 @@ def glm(conditions, onsets, TR, Y, basis='3hrf', mode='r1glm',
     dmtx: array,
         Design matrix. Only returned if return_design_matrix=True
 
-    U_raw: array
-        the raw coefficients of the HRF in terms of the basis. Only
-        returned if return_raw_U=True
-
     """
     if not mode in ('glm', 'r1glm', 'r1glms', 'glms'):
         raise NotImplementedError

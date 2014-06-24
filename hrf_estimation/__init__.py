@@ -5,4 +5,4 @@ import rank_one_separate
 import hrf
 import data
 
-__version__ = '0.5.1'
+__version__ = '0.5.2'

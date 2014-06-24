@@ -353,7 +353,11 @@ def glm(conditions, onsets, TR, Y, basis='3hrf', mode='r1glm',
             (X_design_canonical, np.ones((n_scans, 1))), axis=1)
         V_init = linalg.lstsq(X_design_canonical, Y)[0]
         U_init = np.tile(linalg.lstsq(Q, Q_canonical)[0], n_task)
-        W_init = np.concatenate((U_init, V_init))
+        if mode == 'r1glm':
+            W_init = np.concatenate((U_init, V_init))
+        else:
+            # XXX TODO intercept
+            W_init = np.concatenate((U_init, V_init[:-1], V_init[:-1]))
 
         if n_jobs == -1:
             n_jobs = cpu_count()

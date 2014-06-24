@@ -8,7 +8,7 @@ from joblib import Parallel, delayed, cpu_count
 # local import
 from . import hrf
 
-def create_design_matrix(conditions, onsets, TR, n_scans, basis='dhrf',
+def create_design_matrix(conditions, onsets, TR, n_scans, basis='3hrf',
                          oversample=100, hrf_length=20):
     """
     Parameters

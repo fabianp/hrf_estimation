@@ -28,6 +28,17 @@ Examples
 The following `ipython notebook <http://nbviewer.ipython.org/github/fabianp/hrf_estimation/blob/master/examples/hrf_estimation%20example.ipynb>`_ shows a complete example of how to use the function :func:`hrf_estimation.glm` to estimate the HRF and activation coefficients from a giveb BOLD signal.
 
 
+Frequently Asked Questions
+==========================
+
+Q: I have several runs. Should I fit a big GLM with all the runs or split the estimation in several runs ?
+
+A: In my experience what usually works best is to perform a two-stage estimation. First, perform a joint estimation of the HRFs and activation coefficients per run using for example a Rank-1 model. Then average the estimated HRFs on the different runs. Finally, fit a GLM using the obtained averaged HRF instead of the reference HRF.
+
+Q: What parameters to use when detrending using the savgol filter?
+
+A: It depends on the data, we have found that the parameters detailed in the paper Çukur et al. “Attention during natural vision warps semantic representation across the human brain.,” work well in practice. They used a window length of 240 seconds and a cubic order polynomial.
+
 .. toctree::
    :maxdepth: 2
 

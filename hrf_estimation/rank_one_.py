@@ -393,7 +393,5 @@ def glm(conditions, onsets, TR, Y, basis='3hrf', mode='r1glm',
         V = V * sign * norm
     out = [U, V]
     if return_design_matrix:
-        out.append(
-            np.rec.fromarrays(list(X_design.T),
-                names=",".join(np.unique(conditions))))
+        out.append(X_design.toarray())
     return out

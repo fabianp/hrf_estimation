@@ -9,7 +9,7 @@ from joblib import Parallel, delayed, cpu_count
 from . import hrf
 
 def create_design_matrix(conditions, onsets, TR, n_scans, basis='3hrf',
-                         oversample=100, hrf_length=20):
+                         oversample=5, hrf_length=20):
     """
     Parameters
     ----------
@@ -27,7 +27,7 @@ def create_design_matrix(conditions, onsets, TR, n_scans, basis='3hrf',
         basis = [hrf.spmt]
     elif basis == 'fir':
         basis = []
-        for i in range(int(20. / TR)):
+        for i in range(int(hrf_length / TR)):
             tmp = functools.partial(hrf.fir, i=i, TR=TR)
             # import pylab as pl
             # xx = np.linspace(0, 20)
@@ -54,11 +54,17 @@ def create_design_matrix(conditions, onsets, TR, n_scans, basis='3hrf',
         tmp[idx] = 1.
         for b in B:
             col = np.convolve(b, tmp, mode='full')[:tmp.size]
-            design_matrix_cols.append(col[::oversample])
+            col = col.reshape((-1, oversample), order='C')
+            col = col.mean(1)
+            design_matrix_cols.append(col)
 
     design_matrix = np.array(design_matrix_cols).T
     assert design_matrix.shape[0] == n_scans
-    return design_matrix, np.asarray(B).T[::oversample] # XXX hrf_length
+    Q = []
+    for b in B:
+        b = b.reshape((-1, oversample), order='C')
+        Q.append(b.mean(1))
+    return design_matrix, np.asarray(Q).T
 
 def convolution_matrix(kernel=[1], signal_length=15):
     """

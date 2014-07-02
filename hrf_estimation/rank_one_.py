@@ -391,6 +391,12 @@ def glm(conditions, onsets, TR, Y, basis='3hrf', mode='r1glm',
         norm = np.abs(generated_hrfs).max(0)
         U = U * sign / norm
         V = V * sign * norm
+    elif mode == 'fir' and basis == 'fir':
+        xx =  np.arange(0, TR * hrf_length, TR)
+        sign = np.sign(np.dot(U.T, hrf.spmt(xx)))
+        norm = np.abs(U.max(0))
+        U = U * sign / norm
+        V = V * sign * norm
     out = [U, V]
     if return_design_matrix:
         out.append(

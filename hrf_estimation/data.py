@@ -35,14 +35,6 @@ def get_sample_data(n_sess, full_brain=False, subj=1):
     # scatt_stim = np.load(ds.open(
     #     BASEDIR_SUBJ + 'scatt_stim_%s.npy' % n_sess))
 
-    ### perform detrending: Savitzky-Golay filter
-    n_voxels = voxels.shape[-1]
-    voxels = voxels.reshape(-1, 672, n_voxels)
-    voxels = voxels - savitzky_golay.savgol_filter(voxels, 91, 4, axis=1)
-    voxels = voxels.reshape(-1, n_voxels)
-    print "Performed Savitzky-Golay"
-    voxels = ((voxels - voxels.mean(axis=0)) / voxels.std(axis=0))
-
     em = sparse.coo_matrix(event_matrix)
     fir_matrix = utils.convolve_events(event_matrix, np.eye(HRF_LENGTH))
     events_train = sparse.block_diag([event_matrix] * 5).toarray()

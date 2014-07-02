@@ -33,7 +33,7 @@ Frequently Asked Questions
 
 Q: I have several runs. Should I fit a big GLM with all the runs or split the estimation in several runs ?
 
-A: In my experience what usually works best is to perform a two-stage estimation. First, perform a joint estimation of the HRFs and activation coefficients per run using for example a Rank-1 model. Then average the estimated HRFs on the different runs. Finally, fit a GLM using the obtained averaged HRF instead of the reference HRF.
+A: In my experience what usually works best is to perform a two-stage estimation. First, perform a joint estimation of the HRFs and activation coefficients per run using for example a Rank-1 model. Then average the estimated HRFs on the different runs. Finally, fit a GLM using the obtained averaged HRF instead of the reference HRF to obtain the activation coefficients.
 
 Q: What parameters to use when detrending using the savgol filter?
 

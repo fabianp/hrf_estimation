@@ -177,5 +177,5 @@ def fir(t, i=0, TR=1.):
     i: TODO
     TR: TODO
     """
-    return np.bitwise_and(i * TR <= t, (i+1) * TR >= t).astype(np.float)
+    return np.bitwise_and(i * TR < t, (i+1) * TR > t).astype(np.float)
 

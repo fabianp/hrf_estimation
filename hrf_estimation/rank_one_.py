@@ -391,10 +391,18 @@ def glm(conditions, onsets, TR, Y, basis='3hrf', mode='r1glm',
         norm = np.abs(generated_hrfs).max(0)
         U = U * sign / norm
         V = V * sign * norm
-    elif mode == 'fir' and basis == 'fir':
+    elif mode == 'r1glm' and basis == '2hrf':
+        xx = np.linspace(0, hrf_length * TR)
+        generated_hrfs = U[0] * hrf.spmt(xx)[:, None] + \
+            U[1] * hrf.dspmt(xx)[:, None]
+        sign = np.sign(np.dot(generated_hrfs.T, hrf.spmt(xx)))
+        norm = np.abs(generated_hrfs).max(0)
+        U = U * sign / norm
+        V = V * sign * norm
+    elif mode == 'r1glm' and basis == 'fir':
         xx =  np.arange(0, TR * hrf_length, TR)
         sign = np.sign(np.dot(U.T, hrf.spmt(xx)))
-        norm = np.abs(U.max(0))
+        norm = np.abs(U).max(0)
         U = U * sign / norm
         V = V * sign * norm
     out = [U, V]

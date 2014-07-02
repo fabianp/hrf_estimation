@@ -37,7 +37,7 @@ def create_design_matrix(conditions, onsets, TR, n_scans, basis='3hrf',
     resolution = TR / float(oversample)
     conditions = np.asarray(conditions)
     onsets = np.asarray(onsets, dtype=np.float)
-    unique_conditions = np.unique(conditions)
+    unique_conditions = np.sort(np.unique(conditions))
     design_matrix_cols = []
     B = []
     for b in basis:

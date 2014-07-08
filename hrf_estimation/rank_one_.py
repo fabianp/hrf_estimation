@@ -205,9 +205,12 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
     else:
         ofunc = f_grad
 
-    if (mode == 'glm') and (hrfs is not None):
-        w_i[:n_basis, :] = hrfs
-        ofunc = f_grad_betas
+    if (hrfs is not None):
+        if mode == 'glm':
+            w_i[:n_basis, :] = hrfs
+            ofunc = f_grad_betas
+        else:
+            raise NotImplementedError
 
     bounds = [(-1, 1)] * n_basis + [(None, None)] * (w_i.shape[0] - n_basis)
 
@@ -252,7 +255,7 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
 
 
 def glm(conditions, onsets, TR, Y, basis='3hrf', mode='r1glm',
-        hrf_length=20, oversample=20, 
+        hrf_length=20, oversample=5, 
         rtol=1e-8, verbose=False, maxiter=100, callback=None,
         method='L-BFGS-B', n_jobs=1, hrfs=None,
         return_design_matrix=False):

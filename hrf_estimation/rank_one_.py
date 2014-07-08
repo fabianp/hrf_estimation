@@ -59,7 +59,7 @@ def fprime(w, X, Y, size_u, size_v):
     return - grad
 
 def f_grad(w, X, Y, size_u, size_v):
-    """Returns function AND gradient"""
+    """Returns function AND gradient of the rank-one model"""
     u, v, bias = w[:size_u], w[size_u:size_u + size_v], w[size_u + size_v:]
     assert len(bias) == 1
     res = Y.ravel() - X.dot(np.outer(u, v).ravel('F')).ravel() - bias
@@ -70,6 +70,22 @@ def f_grad(w, X, Y, size_u, size_v):
     grad[size_u:size_u + size_v] = aIXb(X, u, res).ravel()
     grad[size_u + size_v:] = np.sum(res)
     return cost, -grad
+
+def f_grad_betas(w, X, Y, size_u, size_v):
+    """Returns the function and gradient of the rank-one model
+    assumes the HRF is fixed and only optimizes for beta
+    """
+    u, v, bias = w[:size_u], w[size_u:size_u + size_v], w[size_u + size_v:]
+    assert len(bias) == 1
+    res = Y.ravel() - X.dot(np.outer(u, v).ravel('F')).ravel() - bias
+    cost = .5 * linalg.norm(res) ** 2
+    cost -= .5 * (linalg.norm(u) ** 2)
+    grad = np.empty((size_u + size_v + 1))
+    grad[:size_u] = 0
+    grad[size_u:size_u + size_v] = aIXb(X, u, res).ravel()
+    grad[size_u + size_v:] = np.sum(res)
+    return cost, -grad
+
 
 def f_separate(w, X, Y, size_u, size_v, X_all):
     # for the GLM with separate designs
@@ -131,7 +147,8 @@ def f_grad_separate(w, X, Y, size_u, size_v):
     return norm, -grad
 
 def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
-             method='L-BFGS-B', rtol=1e-6,  verbose=0, mode='r1glm'):
+             method='L-BFGS-B', rtol=1e-6,  verbose=0, mode='r1glm',
+             hrfs=None):
     """
     Run a rank-one model with a given design matrix
 
@@ -171,9 +188,9 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
             w_i = np.ones((n_basis + size_v + 1, n_task))
         elif mode == 'r1glms':
             w_i = np.random.randn(n_basis + 2 * size_v, n_task)
-
         else:
             raise NotImplementedError
+
     if mode == 'r1glms':
         E = np.kron(np.ones((size_v, 1)), np.eye(n_basis))
         X_all = sparse.csr_matrix(X.dot(E))
@@ -188,6 +205,9 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
     else:
         ofunc = f_grad
 
+    if (mode == 'glm') and (hrfs is not None):
+        w_i[:n_basis, :] = hrfs
+        ofunc = f_grad_betas
 
     bounds = [(-1, 1)] * n_basis + [(None, None)] * (w_i.shape[0] - n_basis)
 
@@ -234,7 +254,7 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
 def glm(conditions, onsets, TR, Y, basis='3hrf', mode='r1glm',
         hrf_length=20, oversample=20, 
         rtol=1e-8, verbose=False, maxiter=100, callback=None,
-        method='L-BFGS-B', n_jobs=1, 
+        method='L-BFGS-B', n_jobs=1, hrfs=None,
         return_design_matrix=False):
     """
     Perform a GLM from BOLD signal, given the conditons, onset,
@@ -368,7 +388,7 @@ def glm(conditions, onsets, TR, Y, basis='3hrf', mode='r1glm',
         out = Parallel(n_jobs=n_jobs)(
             delayed(rank_one)(
                 X_design, y_i, size_u, w_i, callback=callback, maxiter=maxiter,
-                method=method, rtol=rtol, verbose=verbose, mode=mode)
+                method=method, rtol=rtol, verbose=verbose, mode=mode, hrfs=hrfs)
             for y_i, w_i in zip(Y_split, W_init_split))
 
         counter = 0

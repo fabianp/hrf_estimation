@@ -41,11 +41,8 @@ def create_design_matrix(conditions, onsets, TR, n_scans, basis='3hrf',
     design_matrix_cols = []
     B = []
     for b in basis:
-        tmp_basis = b(np.arange(0, hrf_length, resolution))
-        # import pylab as pl
-        # pl.plot(np.arange(0, hrf_length, resolution), tmp_basis)
-        # pl.show()
-        # import ipdb; ipdb.set_trace()
+        # needs to be a multiple of oversample
+        tmp_basis = b(np.linspace(0, hrf_length, (hrf_length // TR) * oversample))
         B.append(tmp_basis)
     for c in unique_conditions:
         tmp = np.zeros(int(n_scans * TR/resolution))

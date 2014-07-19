@@ -4,9 +4,9 @@ from joblib import Parallel, delayed, cpu_count, Memory
 import warnings
 
 # local imports
-import hrf
-import utils
-from utils import create_design_matrix
+from . import hrf
+from . import utils
+from .utils import create_design_matrix
 
 
 def IaXb(X, a, b):

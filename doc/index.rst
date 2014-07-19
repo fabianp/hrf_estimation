@@ -1,7 +1,8 @@
-.. hrf_estimation documentation master file, created by
-   sphinx-quickstart on Thu Feb 27 09:10:10 2014.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+
+This package implements method for the joint estimation of hemodynamic response function (HRF) and activation coefficients (aka beta-maps) from fMRI data. The methods implemented here are described in the paper
+
+`Data-driven HRF estimation for encoding and decoding models <http://hal.inria.fr/hal-00952554/en>`_, Pedregosa et al. 2004
+
 
 Main functions
 ==============

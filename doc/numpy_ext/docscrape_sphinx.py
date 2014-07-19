@@ -2,10 +2,9 @@ import re
 import inspect
 import textwrap
 import pydoc
-import sphinx
-from docscrape import NumpyDocString
-from docscrape import FunctionDoc
-from docscrape import ClassDoc
+from .docscrape import NumpyDocString
+from .docscrape import FunctionDoc
+from .docscrape import ClassDoc
 
 
 class SphinxDocString(NumpyDocString):
@@ -156,6 +155,7 @@ class SphinxDocString(NumpyDocString):
             out += ['']
             # Latex collects all references to a separate bibliography,
             # so we need to insert links to it
+            import sphinx  # local import to avoid test dependency
             if sphinx.__version__ >= "0.6":
                 out += ['.. only:: latex', '']
             else:

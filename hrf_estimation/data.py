@@ -3,8 +3,7 @@ from scipy import io, sparse
 import tempfile
 
 # local imports
-import utils
-import savitzky_golay
+from . import utils, savitzky_golay
 
 HRF_LENGTH = 20
 

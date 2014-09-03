@@ -61,29 +61,29 @@ def fprime(w, X, Y, size_u, size_v):
 def f_grad(w, X, Y, drifts, size_u, size_v):
     """Returns function AND gradient of the rank-one model"""
     u, v, bias = w[:size_u], w[size_u:size_u + size_v], w[size_u + size_v:]
-    assert len(bias) == 1
-    res = Y.ravel() - X.dot(np.outer(u, v).ravel('F')).ravel() - bias
+    assert len(bias) == drifts.shape[1]
+    res = Y.ravel() - X.dot(np.outer(u, v).ravel('F')).ravel() - drifts.dot(bias)
     cost = .5 * linalg.norm(res) ** 2
     cost -= .5 * (linalg.norm(u) ** 2)
-    grad = np.empty((size_u + size_v + 1))
+    grad = np.empty((size_u + size_v + drifts.shape[1]))
     grad[:size_u] = IaXb(X, v, res).ravel() + u
     grad[size_u:size_u + size_v] = aIXb(X, u, res).ravel()
     grad[size_u + size_v:] = drifts.T.dot(res)
     return cost, -grad
 
-def f_grad_betas(w, X, Y, size_u, size_v):
+def f_grad_betas(w, X, Y, drifts, size_u, size_v):
     """Returns the function and gradient of the rank-one model
     assumes the HRF is fixed and only optimizes for beta
     """
     u, v, bias = w[:size_u], w[size_u:size_u + size_v], w[size_u + size_v:]
-    assert len(bias) == 1
-    res = Y.ravel() - X.dot(np.outer(u, v).ravel('F')).ravel() - bias
+    assert len(bias) == drifts.shape[1]
+    res = Y.ravel() - X.dot(np.outer(u, v).ravel('F')).ravel() - drifts.dot(bias)
     cost = .5 * linalg.norm(res) ** 2
     cost -= .5 * (linalg.norm(u) ** 2)
-    grad = np.empty((size_u + size_v + 1))
+    grad = np.empty((size_u + size_v + drifts.shape[1]))
     grad[:size_u] = 0
     grad[size_u:size_u + size_v] = aIXb(X, u, res).ravel()
-    grad[size_u + size_v:] = np.sum(res)
+    grad[size_u + size_v:] = drifts.T.dot(res)
     return cost, -grad
 
 

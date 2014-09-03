@@ -58,7 +58,7 @@ def fprime(w, X, Y, size_u, size_v):
     grad[size_u + size_v:] = np.sum(res)
     return - grad
 
-def f_grad(w, X, Y, size_u, size_v):
+def f_grad(w, X, Y, drifts, size_u, size_v):
     """Returns function AND gradient of the rank-one model"""
     u, v, bias = w[:size_u], w[size_u:size_u + size_v], w[size_u + size_v:]
     assert len(bias) == 1
@@ -68,7 +68,7 @@ def f_grad(w, X, Y, size_u, size_v):
     grad = np.empty((size_u + size_v + 1))
     grad[:size_u] = IaXb(X, v, res).ravel() + u
     grad[size_u:size_u + size_v] = aIXb(X, u, res).ravel()
-    grad[size_u + size_v:] = np.sum(res)
+    grad[size_u + size_v:] = drifts.dot(res)
     return cost, -grad
 
 def f_grad_betas(w, X, Y, size_u, size_v):
@@ -146,9 +146,9 @@ def f_grad_separate(w, X, Y, size_u, size_v):
     grad[:size_u] += u
     return norm, -grad
 
-def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
-             method='L-BFGS-B', rtol=1e-6,  verbose=0, mode='r1glm',
-             hrfs=None):
+def rank_one(X, y_i, n_basis,  w_i=None, drifts=drifts, callback=None, 
+    maxiter=500, method='L-BFGS-B', rtol=1e-6,  verbose=0, mode='r1glm',
+    hrfs=None):
     """
     Run a rank-one model with a given design matrix
 
@@ -185,8 +185,9 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
     if w_i is None:
         if mode == 'r1glm':
             # XXX initialization
-            w_i = np.ones((n_basis + size_v + 1, n_task))
+            w_i = np.ones((n_basis + size_v + drifts.shape[1], n_task))
         elif mode == 'r1glms':
+            # XXX TODO
             w_i = np.random.randn(n_basis + 2 * size_v, n_task)
         else:
             raise NotImplementedError
@@ -221,7 +222,7 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
 
 
     for i in range(n_task):
-        args = [X, y_i[:, i], n_basis, size_v]
+        args = [X, y_i[:, i], drifts, n_basis, size_v]
         options = {'maxiter': maxiter}
         if int(verbose) > 1:
             options['disp'] = 5
@@ -254,9 +255,9 @@ def rank_one(X, y_i, n_basis,  w_i=None, callback=None, maxiter=100,
     return U, V
 
 
-def glm(conditions, onsets, TR, Y, basis='3hrf', mode='r1glm',
+def glm(conditions, onsets, TR, Y, drifts=None, basis='3hrf', mode='r1glm',
         hrf_length=20, oversample=5, 
-        rtol=1e-8, verbose=False, maxiter=100, callback=None,
+        rtol=1e-8, verbose=False, maxiter=500, callback=None,
         method='L-BFGS-B', n_jobs=1, hrfs=None,
         return_design_matrix=False):
     """
@@ -346,6 +347,8 @@ def glm(conditions, onsets, TR, Y, basis='3hrf', mode='r1glm',
     verbose = int(verbose)
     if verbose > 0:
         print('.. creating design matrix ..')
+    if drifts is None:
+        np.ones((n_scans, 1))
 
     X_design, Q = create_design_matrix(
         conditions, onsets, TR, n_scans, basis, oversample, hrf_length)
@@ -373,7 +376,7 @@ def glm(conditions, onsets, TR, Y, basis='3hrf', mode='r1glm',
         X_design_canonical, Q_canonical = create_design_matrix(conditions, onsets, TR,
             n_scans, [hrf.spmt], oversample, hrf_length)
         X_design_canonical = np.concatenate(
-            (X_design_canonical, np.ones((n_scans, 1))), axis=1)
+            (X_design_canonical, drifts), axis=1)
         V_init = linalg.lstsq(X_design_canonical, Y)[0]
         U_init = np.tile(linalg.lstsq(Q, Q_canonical)[0], n_task)
         if mode == 'r1glm':
@@ -390,7 +393,7 @@ def glm(conditions, onsets, TR, Y, basis='3hrf', mode='r1glm',
 
         out = Parallel(n_jobs=n_jobs)(
             delayed(rank_one)(
-                X_design, y_i, size_u, w_i, callback=callback, maxiter=maxiter,
+                X_design, y_i, size_u, w_i, drifts=drifts, callback=callback, maxiter=maxiter,
                 method=method, rtol=rtol, verbose=verbose, mode=mode, hrfs=hrfs)
             for y_i, w_i in zip(Y_split, W_init_split))
 

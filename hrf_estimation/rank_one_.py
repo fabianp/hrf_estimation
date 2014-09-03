@@ -68,7 +68,7 @@ def f_grad(w, X, Y, drifts, size_u, size_v):
     grad = np.empty((size_u + size_v + 1))
     grad[:size_u] = IaXb(X, v, res).ravel() + u
     grad[size_u:size_u + size_v] = aIXb(X, u, res).ravel()
-    grad[size_u + size_v:] = drifts.dot(res)
+    grad[size_u + size_v:] = drifts.T.dot(res)
     return cost, -grad
 
 def f_grad_betas(w, X, Y, size_u, size_v):
@@ -146,7 +146,7 @@ def f_grad_separate(w, X, Y, size_u, size_v):
     grad[:size_u] += u
     return norm, -grad
 
-def rank_one(X, y_i, n_basis,  w_i=None, drifts=drifts, callback=None, 
+def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None, 
     maxiter=500, method='L-BFGS-B', rtol=1e-6,  verbose=0, mode='r1glm',
     hrfs=None):
     """
@@ -348,7 +348,7 @@ def glm(conditions, onsets, TR, Y, drifts=None, basis='3hrf', mode='r1glm',
     if verbose > 0:
         print('.. creating design matrix ..')
     if drifts is None:
-        np.ones((n_scans, 1))
+        drifts = np.ones((n_scans, 1))
 
     X_design, Q = create_design_matrix(
         conditions, onsets, TR, n_scans, basis, oversample, hrf_length)

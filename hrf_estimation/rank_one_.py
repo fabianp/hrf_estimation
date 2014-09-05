@@ -49,24 +49,25 @@ def f_r1(w, X, Y, size_u, size_v):
     return cost
 
 
-def fprime(w, X, Y, size_u, size_v):
+def fprime(w, X, Y, drifts, size_u, size_v):
     u, v, bias = w[:size_u], w[size_u:size_u + size_v], w[size_u + size_v:]
-    res = Y.ravel() - X.dot(np.outer(u, v).ravel('F')).ravel() - bias
-    grad = np.empty((size_u + size_v + 1))
+    res = Y.ravel() - X.dot(np.outer(u, v).ravel('F')).ravel() - drifts.dot(bias)
+    grad = np.empty((size_u + size_v + drifts.shape[1]))
     grad[:size_u] = IaXb(X, v, res).ravel() + u
     grad[size_u:size_u + size_v] = aIXb(X, u, res).ravel()
-    grad[size_u + size_v:] = np.sum(res)
+    grad[size_u + size_v:] = drifts.dot(res)
     return - grad
 
 def f_grad(w, X, Y, drifts, size_u, size_v):
     """Returns function AND gradient of the rank-one model"""
     u, v, bias = w[:size_u], w[size_u:size_u + size_v], w[size_u + size_v:]
     assert len(bias) == drifts.shape[1]
+    alpha = 1e-3
     res = Y.ravel() - X.dot(np.outer(u, v).ravel('F')).ravel() - drifts.dot(bias)
     cost = .5 * linalg.norm(res) ** 2
-    cost -= .5 * (linalg.norm(u) ** 2)
+    cost -= alpha * .5 * (linalg.norm(u) ** 2)
     grad = np.empty((size_u + size_v + drifts.shape[1]))
-    grad[:size_u] = IaXb(X, v, res).ravel() + u
+    grad[:size_u] = IaXb(X, v, res).ravel() + alpha * u
     grad[size_u:size_u + size_v] = aIXb(X, u, res).ravel()
     grad[size_u + size_v:] = drifts.T.dot(res)
     return cost, -grad
@@ -384,6 +385,8 @@ def glm(conditions, onsets, TR, Y, drifts=None, basis='3hrf', mode='r1glm',
         else:
             # XXX TODO intercept
             W_init = np.concatenate((U_init, V_init[:-1], V_init[:-1]))
+        if verbose > 0:
+            print('.. done initialization ..')
 
         if n_jobs == -1:
             n_jobs = cpu_count()

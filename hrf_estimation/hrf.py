@@ -114,11 +114,11 @@ def spm_hrf_compat(t,
     pos_t = t[t > 0]
     peak = sps.gamma.pdf(pos_t,
                          peak_delay / peak_disp,
-                         loc=0,
+                         loc=1,
                          scale=peak_disp)
     undershoot = sps.gamma.pdf(pos_t,
                                under_delay / under_disp,
-                               loc=0,
+                               loc=1,
                                scale=under_disp)
     hrf[t > 0] = peak - undershoot / p_u_ratio
     if not normalize:
@@ -136,7 +136,18 @@ _spm_can_int = _get_num_int(partial(spm_hrf_compat, normalize=True))
 def spmt(t):
     """ SPM canonical HRF, HRF values for time values `t`
 
-    This is the canonical HRF function as used in SPM
+    This is the canonical HRF function as used in SPM. It
+    has the following defaults:
+
+                                                defaults
+                                                (seconds)
+    delay of response (relative to onset)         6
+    delay of undershoot (relative to onset)      16
+    dispersion of response                        1
+    dispersion of undershoot                      1
+    ratio of response to undershoot               6
+    onset (seconds)                               0
+    length of kernel (seconds)                   32
     """
     return spm_hrf_compat(t, normalize=True)
 

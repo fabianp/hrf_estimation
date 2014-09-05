@@ -9,7 +9,7 @@ from joblib import Parallel, delayed, cpu_count
 from . import hrf
 
 def create_design_matrix(conditions, onsets, TR, n_scans, basis='3hrf',
-                         oversample=5, hrf_length=20):
+                         oversample=10, hrf_length=32):
     """
     Parameters
     ----------
@@ -52,7 +52,7 @@ def create_design_matrix(conditions, onsets, TR, n_scans, basis='3hrf',
         for b in B:
             col = np.convolve(b, tmp, mode='full')[:tmp.size]
             col = col.reshape((-1, oversample), order='C')
-            col = col.mean(1)
+            col = np.median(col, axis=1)
             design_matrix_cols.append(col)
 
     design_matrix = np.array(design_matrix_cols).T

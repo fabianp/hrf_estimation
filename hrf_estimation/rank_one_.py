@@ -248,16 +248,6 @@ def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None,
             maxiter=maxiter, callback=callback, pgtol=rtol, 
             maxfun=30000,
             **kwargs)
-        # normalize and run again
-        w_i_tmp = out[0]
-        norm = linalg.norm(w_i_tmp[:n_basis].ravel())
-        w_i_tmp[:n_basis] /= norm
-        w_i_tmp[n_basis:n_basis + size_v] *= norm
-        out = solver(
-            ofunc, w_i_tmp, args=args, bounds=bounds,
-            maxiter=maxiter, callback=callback, pgtol=rtol, 
-            maxfun=30000,
-            **kwargs)
 
         if verbose > 1 and not out[-1]['warnflag'] != 0:
             warnings.warn(out[-1]['task'])

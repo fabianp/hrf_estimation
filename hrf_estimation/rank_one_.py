@@ -62,12 +62,13 @@ def f_grad(w, X, Y, drifts, size_u, size_v):
     """Returns function AND gradient of the rank-one model"""
     u, v, bias = w[:size_u], w[size_u:size_u + size_v], w[size_u + size_v:]
     assert len(bias) == drifts.shape[1]
-    alpha = 1e-3
+    alpha = 1e6
     res = Y.ravel() - X.dot(np.outer(u, v).ravel('F')).ravel() - drifts.dot(bias)
     cost = .5 * linalg.norm(res) ** 2
-    cost -= alpha * .5 * (linalg.norm(u) ** 2)
+    cost -= alpha * .5 * (linalg.norm(u[0]) ** 2)
     grad = np.empty((size_u + size_v + drifts.shape[1]))
-    grad[:size_u] = IaXb(X, v, res).ravel() + alpha * u
+    grad[:size_u] = IaXb(X, v, res).ravel()
+    grad[0] +=  alpha * u[0]
     grad[size_u:size_u + size_v] = aIXb(X, u, res).ravel()
     grad[size_u + size_v:] = drifts.T.dot(res)
     return cost, -grad
@@ -192,6 +193,12 @@ def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None,
             w_i = np.random.randn(n_basis + 2 * size_v, n_task)
         else:
             raise NotImplementedError
+    w_i = np.array(w_i)
+    if mode == 'r1glm':
+        assert w_i.shape[0] == n_basis + size_v + drifts.shape[1]
+    elif mode == 'r1glms':
+        assert w_i.shape[0] == n_basis + 2 * size_v + drifts.shape[1]
+    assert w_i.shape[1] == n_task
 
     if mode == 'r1glms':
         E = np.kron(np.ones((size_v, 1)), np.eye(n_basis))
@@ -214,7 +221,7 @@ def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None,
         else:
             raise NotImplementedError
 
-    bounds = [(-1, 1)] * n_basis + [(None, None)] * (w_i.shape[0] - n_basis)
+    bounds = [(-1, 1)] * 1 + [(None, None)] * (w_i.shape[0] - 1)
 
     if method == 'L-BFGS-B':
         solver = optimize.fmin_l_bfgs_b
@@ -233,7 +240,19 @@ def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None,
 
         out = solver(
             ofunc, w_i[:, i], args=args, bounds=bounds,
-            maxiter=maxiter, callback=callback, factr=rtol, **kwargs)
+            maxiter=maxiter, callback=callback, pgtol=rtol, 
+            maxfun=30000,
+            **kwargs)
+        # normalize and run again
+        w_i_tmp = out[0]
+        norm = linalg.norm(w_i_tmp[:n_basis].ravel())
+        w_i_tmp[:n_basis] /= norm
+        w_i_tmp[n_basis:n_basis + size_v] *= norm
+        out = solver(
+            ofunc, w_i_tmp, args=args, bounds=bounds,
+            maxiter=maxiter, callback=callback, pgtol=rtol, 
+            maxfun=30000,
+            **kwargs)
 
         if verbose > 1 and not out[-1]['warnflag'] != 0:
             warnings.warn(out[-1]['task'])

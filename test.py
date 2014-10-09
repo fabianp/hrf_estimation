@@ -7,11 +7,12 @@ def test_grad():
     n_samples, n_features = 12, 20
     size_u, size_v = 2, 10
     np.random.seed(0)
-    w = np.random.randn(size_u + size_v + 1)
+    w = np.random.randn(size_u + size_v + 3)
     X = np.random.randn(n_samples, n_features)
     Y = np.random.randn(n_samples)
-    func = lambda x: he.f_grad(x, X, Y, size_u, size_v)[0]
-    grad = lambda x: he.f_grad(x, X, Y, size_u, size_v)[1]
+    drifts = np.random.randn(n_samples, 3)
+    func = lambda x: he.f_grad(x, X, Y, drifts, size_u, size_v)[0]
+    grad = lambda x: he.f_grad(x, X, Y, drifts, size_u, size_v)[1]
     assert optimize.check_grad(func, grad, w) < .1
     #
     # X = np.random.randn(n_samples, n_features)

@@ -65,10 +65,10 @@ def f_grad(w, X, Y, drifts, size_u, size_v):
     alpha = 1e6
     res = Y.ravel() - X.dot(np.outer(u, v).ravel('F')).ravel() - drifts.dot(bias)
     cost = .5 * linalg.norm(res) ** 2
-    cost -= alpha * .5 * (linalg.norm(u[0]) ** 2)
+#    cost -= alpha * .5 * (linalg.norm(u[0]) ** 2)
     grad = np.empty((size_u + size_v + drifts.shape[1]))
     grad[:size_u] = IaXb(X, v, res).ravel()
-    grad[0] +=  alpha * u[0]
+#    grad[0] +=  alpha * u[0]
     grad[size_u:size_u + size_v] = aIXb(X, u, res).ravel()
     grad[size_u + size_v:] = drifts.T.dot(res)
     return cost, -grad
@@ -150,7 +150,7 @@ def f_grad_separate(w, X, Y, size_u, size_v):
 
 def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None, 
     maxiter=500, method='L-BFGS-B', rtol=1e-6,  verbose=0, mode='r1glm',
-    hrfs=None):
+    hrfs=None, basis=None):
     """
     Run a rank-one model with a given design matrix
 
@@ -221,7 +221,12 @@ def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None,
         else:
             raise NotImplementedError
 
-    bounds = [(-1, 1)] * 1 + [(None, None)] * (w_i.shape[0] - 1)
+    if basis is None:
+        bounds = [(1, 1)] + [(None, None)] * (w_i.shape[0] - 1)
+    elif basis in ('2hrf', '3hrf'):
+        # constrain the derivatives to not go too far
+        bounds = [(1, 1)] + [(-1., 1.)] * (n_basis - 1)  + \
+            [(None, None)]* (w_i.shape[0] - n_basis)
 
     if method == 'L-BFGS-B':
         solver = optimize.fmin_l_bfgs_b
@@ -416,7 +421,7 @@ def glm(conditions, onsets, TR, Y, drifts=None, basis='3hrf', mode='r1glm',
         out = Parallel(n_jobs=n_jobs)(
             delayed(rank_one)(
                 X_design, y_i, size_u, w_i, drifts=drifts, callback=callback, maxiter=maxiter,
-                method=method, rtol=rtol, verbose=verbose, mode=mode, hrfs=hrfs)
+                method=method, rtol=rtol, verbose=verbose, mode=mode, hrfs=hrfs, basis=basis)
             for y_i, w_i in zip(Y_split, W_init_split))
 
         counter = 0

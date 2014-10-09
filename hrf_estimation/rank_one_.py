@@ -431,7 +431,7 @@ def glm(conditions, onsets, TR, Y, drifts=None, basis='3hrf', mode='r1glm',
 
         raw_U = U.copy()
         # normalize
-    if mode == 'r1glm' and basis == '3hrf':
+    if mode in ('r1glm',) and basis == '3hrf':
         xx = np.linspace(0, hrf_length * TR)
         generated_hrfs = U[0] * hrf.spmt(xx)[:, None] + \
             U[1] * hrf.dspmt(xx)[:, None] + U[2] * hrf.ddspmt(xx)[:, None]
@@ -439,7 +439,7 @@ def glm(conditions, onsets, TR, Y, drifts=None, basis='3hrf', mode='r1glm',
         norm = np.abs(generated_hrfs).max(0)
         U = U * sign / norm
         V = V * sign * norm
-    elif mode == 'r1glm' and basis == '2hrf':
+    elif mode in ('r1glm',) and basis == '2hrf':
         xx = np.linspace(0, hrf_length * TR)
         generated_hrfs = U[0] * hrf.spmt(xx)[:, None] + \
             U[1] * hrf.dspmt(xx)[:, None]

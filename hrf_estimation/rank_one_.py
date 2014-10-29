@@ -221,12 +221,14 @@ def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None,
         else:
             raise NotImplementedError
 
-    if basis is None:
+    if basis in ('fir', None):
         bounds = [(1, 1)] + [(None, None)] * (w_i.shape[0] - 1)
     elif basis in ('2hrf', '3hrf'):
         # constrain the derivatives to not go too far
         bounds = [(1, 1)] + [(-1., 1.)] * (n_basis - 1)  + \
             [(None, None)]* (w_i.shape[0] - n_basis)
+    else:
+        raise NotImplementedError('basis %s not known' % basis)
 
     if method == 'L-BFGS-B':
         solver = optimize.fmin_l_bfgs_b

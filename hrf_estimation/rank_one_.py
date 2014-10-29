@@ -391,7 +391,7 @@ def glm(conditions, onsets, TR, Y, drifts=None, basis='3hrf', mode='r1glm',
         if verbose > 0:
             print('.. computing initialization ..')
         X_design_canonical, Q_canonical = create_design_matrix(conditions, onsets, TR,
-            n_scans, [hrf.spmt], oversample, hrf_length)
+            n_scans, 'hrf', oversample, hrf_length)
         X_design_canonical = np.concatenate(
             (X_design_canonical, drifts), axis=1)
         V_init = linalg.lstsq(X_design_canonical, Y)[0]

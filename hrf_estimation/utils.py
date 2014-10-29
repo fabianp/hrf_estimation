@@ -11,14 +11,44 @@ from . import hrf
 def create_design_matrix(conditions, onsets, TR, n_scans, basis='3hrf',
                          oversample=10, hrf_length=32):
     """
+    Create a design matrix. This function uses NiPy to create the design
+    matrix.
+
     Parameters
     ----------
-    conditions: list of conditions
-    onset: list of onsets
+    conditions: list
+        List of conditions, each condition should be represented by a 
+        string.
+    onset: list
+        List of onsets. Each onset is represented by a floating point number.
     TR: float
         repetition time
-    n_scans: number of scans
+    n_scans: int
+        number of scans
+
+    Examples
+    --------
+    Create a design matrix with two conditions 'a' and 'b'. Condition 'a'
+    appears at 0 and 10 seconds and condition 'b' appears at 5 and 15 
+    seconds.
+    >>> mat, Q = create_design_matrix(['a', 'b', 'a', 'b'], [0, 5, 10, 15], 20)
     """
+
+    # need nipy for this function
+    from nipy.modalities.fmri import design_matrix, experimental_paradigm
+
+    nipy_basis_dict = {'3hrf' : 'spm_time_dispersion', '2hrf' : 'spm_time', 
+                        'hrf' : 'spm', 'fir': 'fir'}
+    nipy_basis = nipy_basis_dict.get(basis, None)
+    if nipy_basis is None:
+        raise ValueError('basis %s not understood' % basis)
+    paradigm = experimental_paradigm.EventRelatedParadigm(
+        con_id=conditions, onset=onsets)
+    mtx = design_matrix.make_dmtx(np.arange(0, TR * n_scans), 
+        paradigm = paradigm, drift_model='blank', hrf_model=nipy_basis)
+
+    design_matrix = mtx.matrix[:, :-1]
+
     if basis == '3hrf':
         basis = [hrf.spmt, hrf.dspmt, hrf.ddspmt]
     elif basis == '2hrf':
@@ -38,25 +68,13 @@ def create_design_matrix(conditions, onsets, TR, n_scans, basis='3hrf',
     conditions = np.asarray(conditions)
     onsets = np.asarray(onsets, dtype=np.float)
     unique_conditions = np.sort(np.unique(conditions))
-    design_matrix_cols = []
+
     B = []
     for b in basis:
         # needs to be a multiple of oversample
         tmp_basis = b(np.linspace(0, hrf_length, (hrf_length // TR) * oversample))
         B.append(tmp_basis)
-    for c in unique_conditions:
-        tmp = np.zeros(int(n_scans * TR/resolution))
-        onset_c = onsets[conditions == c]
-        idx = np.round(onset_c / resolution).astype(np.int)
-        tmp[idx] = 1.
-        for b in B:
-            col = np.convolve(b, tmp, mode='full')[:tmp.size]
-            col = col.reshape((-1, oversample), order='C')
-            col = np.median(col, axis=1)
-            design_matrix_cols.append(col)
 
-    design_matrix = np.array(design_matrix_cols).T
-    assert design_matrix.shape[0] == n_scans
     Q = []
     for b in B:
         b = b.reshape((-1, oversample), order='C')

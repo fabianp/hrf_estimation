@@ -45,7 +45,8 @@ def create_design_matrix(conditions, onsets, TR, n_scans, basis='3hrf',
     paradigm = experimental_paradigm.EventRelatedParadigm(
         con_id=conditions, onset=onsets)
     mtx = design_matrix.make_dmtx(np.arange(0, TR * n_scans), 
-        paradigm = paradigm, drift_model='blank', hrf_model=nipy_basis)
+        paradigm = paradigm, drift_model='blank', hrf_model=nipy_basis,
+        fir_delays=np.arange(0, hrf_length // TR))
 
     design_matrix = mtx.matrix[:, :-1]
 

@@ -273,7 +273,7 @@ def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None,
 
 
 def glm(conditions, onsets, TR, Y, drifts=None, basis='3hrf', mode='r1glm',
-        hrf_length=20, oversample=5, 
+        hrf_length=20, 
         rtol=1e-8, verbose=False, maxiter=500, callback=None,
         method='L-BFGS-B', n_jobs=1, hrfs=None,
         return_design_matrix=False):
@@ -368,7 +368,7 @@ def glm(conditions, onsets, TR, Y, drifts=None, basis='3hrf', mode='r1glm',
         drifts = np.ones((n_scans, 1))
 
     X_design, Q = create_design_matrix(
-        conditions, onsets, TR, n_scans, basis, oversample, hrf_length)
+        conditions, onsets, TR, n_scans, basis, hrf_length)
     if verbose > 0:
         print('.. done creating design matrix ..')
 
@@ -391,7 +391,7 @@ def glm(conditions, onsets, TR, Y, drifts=None, basis='3hrf', mode='r1glm',
         if verbose > 0:
             print('.. computing initialization ..')
         X_design_canonical, Q_canonical = create_design_matrix(conditions, onsets, TR,
-            n_scans, 'hrf', oversample, hrf_length)
+            n_scans, 'hrf', hrf_length)
         X_design_canonical = np.concatenate(
             (X_design_canonical, drifts), axis=1)
         V_init = linalg.lstsq(X_design_canonical, Y)[0]

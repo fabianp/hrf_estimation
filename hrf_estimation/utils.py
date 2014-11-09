@@ -34,6 +34,11 @@ def create_design_matrix(conditions, onsets, TR, n_scans, basis='3hrf',
             # pl.plot(xx, tmp(xx)); pl.show()
             basis.append(tmp)
 
+    frametimes = np.arange(0, TR * n_scans, TR)
+    hr_frametimes = np.arange(0, TR * n_scans, TR / oversample)
+
+    from scipy.interpolate import interp1d
+
     resolution = TR / float(oversample)
     conditions = np.asarray(conditions)
     onsets = np.asarray(onsets, dtype=np.float)
@@ -51,8 +56,8 @@ def create_design_matrix(conditions, onsets, TR, n_scans, basis='3hrf',
         tmp[idx] = 1.
         for b in B:
             col = np.convolve(b, tmp, mode='full')[:tmp.size]
-            col = col.reshape((-1, oversample), order='C')
-            col = np.median(col, axis=1)
+            f = interp1d(hr_frametimes, col)
+            col =  f(frametimes).T
             design_matrix_cols.append(col)
 
     design_matrix = np.array(design_matrix_cols).T

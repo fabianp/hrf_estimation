@@ -178,7 +178,13 @@ def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None,
         Estimated activation coefficients
     """
     y_i = np.array(y_i)
-    n_task = y_i.shape[1]
+    if y_i.ndim > 1:
+        n_task = y_i.shape[1]
+    else:
+        n_task = 1
+        y_i = y_i.reshape((y_i.size, 1))
+    if drifts is None:
+        drifts = np.zeros((y_i.shape[0], 1))
     size_v = X.shape[1] // n_basis
     U = []
     V = []

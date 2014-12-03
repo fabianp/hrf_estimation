@@ -37,29 +37,14 @@ Q: What parameters to use when detrending using the savgol filter?
 
 A: It depends on the data, we have found that the parameters detailed in the paper Çukur et al. “Attention during natural vision warps semantic representation across the human brain.,” work well in practice. They used a window length of 240 seconds and a cubic order polynomial.
 
+
+
+API reference
+=============
+
 .. toctree::
-   :maxdepth: 2
 
-
-
-Function signature
-==================
-
-.. autofunction:: hrf_estimation.glm
-
-
-.. autofunction:: hrf_estimation.rank_one
-
-.. autofunction:: hrf_estimation.hrf.spmt
-
-.. autofunction:: hrf_estimation.hrf.dspmt
-
-.. autofunction:: hrf_estimation.hrf.ddspmt
-
-.. autofunction:: hrf_estimation.savitzky_golay.savgol_filter
-
-
-
+	reference
 
 Indices and tables
 ==================
@@ -67,4 +52,5 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
 

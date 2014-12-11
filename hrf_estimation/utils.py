@@ -18,6 +18,12 @@ def create_design_matrix(conditions, onsets, TR, n_scans, basis='3hrf',
     TR: float
         repetition time
     n_scans: number of scans
+    basis: one of {'fir', '3hrf', '2hrf', 'hrf'}
+    
+    Returns
+    -------
+    design_matrix
+    basis
     """
     if basis == '3hrf':
         basis = [hrf.spmt, hrf.dspmt, hrf.ddspmt]
@@ -57,7 +63,7 @@ def create_design_matrix(conditions, onsets, TR, n_scans, basis='3hrf',
         for b in B:
             col = np.convolve(b, tmp, mode='full')[:tmp.size]
             f = interp1d(hr_frametimes, col)
-            col =  f(frametimes).T
+            col =  f(frametimes)
             design_matrix_cols.append(col)
 
     design_matrix = np.array(design_matrix_cols).T

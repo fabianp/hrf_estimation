@@ -26,3 +26,7 @@ ddspmt
 savgol_filter
 -------------
 .. autofunction:: hrf_estimation.savitzky_golay.savgol_filter
+
+create_design_matrix
+--------------------
+.. autofunction:: hrf_estimation.utils.create_design_matrix

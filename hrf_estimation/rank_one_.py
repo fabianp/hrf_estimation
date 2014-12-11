@@ -62,13 +62,10 @@ def f_grad(w, X, Y, drifts, size_u, size_v):
     """Returns function AND gradient of the rank-one model"""
     u, v, bias = w[:size_u], w[size_u:size_u + size_v], w[size_u + size_v:]
     assert len(bias) == drifts.shape[1]
-    alpha = 1e6
     res = Y.ravel() - X.dot(np.outer(u, v).ravel('F')).ravel() - drifts.dot(bias)
     cost = .5 * linalg.norm(res) ** 2
-#    cost -= alpha * .5 * (linalg.norm(u[0]) ** 2)
     grad = np.empty((size_u + size_v + drifts.shape[1]))
     grad[:size_u] = IaXb(X, v, res).ravel()
-#    grad[0] +=  alpha * u[0]
     grad[size_u:size_u + size_v] = aIXb(X, u, res).ravel()
     grad[size_u + size_v:] = drifts.T.dot(res)
     return cost, -grad
@@ -227,14 +224,13 @@ def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None,
         else:
             raise NotImplementedError
 
-    if basis in ('fir', None):
-        bounds = [(1, 1)] + [(None, None)] * (w_i.shape[0] - 1)
-    elif basis in ('2hrf', '3hrf'):
+    if basis in ('2hrf', '3hrf'):
         # constrain the derivatives to not go too far
         bounds = [(1, 1)] + [(-1., 1.)] * (n_basis - 1)  + \
             [(None, None)]* (w_i.shape[0] - n_basis)
     else:
-        raise NotImplementedError('basis %s not known' % basis)
+        bounds = [(1, 1)]  + \
+            [(None, None)]* (w_i.shape[0] - 1)
 
     if method == 'L-BFGS-B':
         solver = optimize.fmin_l_bfgs_b

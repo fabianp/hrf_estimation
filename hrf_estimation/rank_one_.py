@@ -145,9 +145,9 @@ def f_grad_separate(w, X, Y, size_u, size_v):
     grad[:size_u] += u
     return norm, -grad
 
-def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None, 
+def rank_one(X, y, n_basis,  w_i=None, drifts=None, callback=None,
     maxiter=500, method='L-BFGS-B', rtol=1e-6,  verbose=0, mode='r1glm',
-    hrfs=None, basis=None):
+    basis=None):
     """
     Estimates a R1-GLM model with a given design matrix.
 
@@ -163,7 +163,7 @@ def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None,
         Design matrix. Note that the number of columns in the design matrix
         must be a multiple of the number of basis elements (n_basis)
 
-    y_i: array-like
+    y_i: array-like, shape (n_scans, n_voxels)
         BOLD signal.
 
     n_basis : int
@@ -173,6 +173,7 @@ def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None,
         initial point.
 
     method: {'L-BFGS-B', 'TNC'}
+        Optimization algorithm.
 
     Returns
     -------
@@ -181,14 +182,14 @@ def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None,
     V : array
         Estimated activation coefficients
     """
-    y_i = np.array(y_i)
-    if y_i.ndim > 1:
-        n_task = y_i.shape[1]
+    y = np.array(y)
+    if y.ndim > 1:
+        n_task = y.shape[1]
     else:
         n_task = 1
-        y_i = y_i.reshape((y_i.size, 1))
+        y = y.reshape((y.size, 1))
     if drifts is None:
-        drifts = np.zeros((y_i.shape[0], 1))
+        drifts = np.zeros((y.shape[0], 1))
     size_v = X.shape[1] // n_basis
     U = []
     V = []
@@ -224,12 +225,6 @@ def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None,
     else:
         ofunc = f_grad
 
-    if (hrfs is not None):
-        if mode == 'glm':
-            w_i[:n_basis, :] = hrfs
-            ofunc = f_grad_betas
-        else:
-            raise NotImplementedError
 
     if basis in ('2hrf', '3hrf'):
         # constrain the derivatives to not go too far
@@ -246,7 +241,7 @@ def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None,
 
 
     for i in range(n_task):
-        args = [X, y_i[:, i], drifts, n_basis, size_v]
+        args = [X, y[:, i], drifts, n_basis, size_v]
         options = {'maxiter': maxiter}
         if int(verbose) > 1:
             options['disp'] = 5
@@ -256,7 +251,7 @@ def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None,
 
         out = solver(
             ofunc, w_i[:, i], args=args, bounds=bounds,
-            maxiter=maxiter, callback=callback, pgtol=rtol, 
+            maxiter=maxiter, callback=callback, pgtol=rtol,
             maxfun=30000,
             **kwargs)
 
@@ -282,7 +277,7 @@ def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None,
 
 
 def glm(conditions, onsets, TR, Y, drifts=None, basis='3hrf', mode='r1glm',
-        hrf_length=20, oversample=5, 
+        hrf_length=20, oversample=5,
         rtol=1e-8, verbose=False, maxiter=500, callback=None,
         method='L-BFGS-B', n_jobs=1, hrfs=None,
         return_design_matrix=False):
@@ -304,12 +299,12 @@ def glm(conditions, onsets, TR, Y, drifts=None, basis='3hrf', mode='r1glm',
         - 3hrf: basis with 3 elements
         - fir: basis with hrf_length elements (in multiples of TR)
 
-    **Note** the output parameters need are not normalized. 
-    Rank-1 models are specified up to a constant 
+    **Note** the output parameters need are not normalized.
+    Rank-1 models are specified up to a constant
     term between the betas and the HRF. This implies that some
     normalization must be done prior to interpreting the activation
-    coefficients. Typically the HRF is normalized to 
-    have unit amplitude and to correlate positively with a 
+    coefficients. Typically the HRF is normalized to
+    have unit amplitude and to correlate positively with a
     reference HRF.
 
 

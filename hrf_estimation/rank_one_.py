@@ -149,12 +149,19 @@ def rank_one(X, y_i, n_basis,  w_i=None, drifts=None, callback=None,
     maxiter=500, method='L-BFGS-B', rtol=1e-6,  verbose=0, mode='r1glm',
     hrfs=None, basis=None):
     """
-    Run a rank-one model with a given design matrix
+    Estimates a R1-GLM model with a given design matrix.
+
+    This methods solves a problem of the form
+
+        argmin_{hrf, betas} ||y - X vec(hrf betas.T)||^2
+
+    for given y and X
 
     Parameters
     ----------
-    X : array-like
-        Design matrix.
+    X : array-like, shape (n_scans, n_regressors)
+        Design matrix. Note that the number of columns in the design matrix
+        must be a multiple of the number of basis elements (n_basis)
 
     y_i: array-like
         BOLD signal.

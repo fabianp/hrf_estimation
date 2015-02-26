@@ -17,6 +17,7 @@ Alexandre Gramfort. URL: http://hal.inria.fr/hal-00821946/en
 
 
 .. image:: https://raw.github.com/fabianp/hrf_estimation/master/doc/estimation_natural_images.png
+   :target: http://nbviewer.ipython.org/github/fabianp/hrf_estimation/blob/master/examples/hrf_estimation%20example.ipynb
 
 
 Installation

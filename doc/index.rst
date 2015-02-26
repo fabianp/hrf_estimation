@@ -4,6 +4,13 @@ This package implements method for the joint estimation of hemodynamic response 
 `Data-driven HRF estimation for encoding and decoding models <http://hal.inria.fr/hal-00952554/en>`_, Pedregosa et al. 2004
 
 
+Examples
+========
+
+.. image:: estimation_natural_images.png
+
+The following `ipython notebook <http://nbviewer.ipython.org/github/fabianp/hrf_estimation/blob/master/examples/hrf_estimation%20example.ipynb>`_ shows a complete example of how to use the function :func:`hrf_estimation.glm` to estimate the HRF and activation coefficients from a giveb BOLD signal.
+
 Main functions
 ==============
 
@@ -24,10 +31,6 @@ The package contains other routines for convenience. For example, the module :mo
 The module :mod:`hrf_estimation.savitzky_golay` contains the savgol filter :func:`hrf_estimation.savitzky_golay.savgol_filter` for detrending backported from SciPy.
 
 
-Examples
-========
-
-The following `ipython notebook <http://nbviewer.ipython.org/github/fabianp/hrf_estimation/blob/master/examples/hrf_estimation%20example.ipynb>`_ shows a complete example of how to use the function :func:`hrf_estimation.glm` to estimate the HRF and activation coefficients from a giveb BOLD signal.
 
 
 Frequently Asked Questions

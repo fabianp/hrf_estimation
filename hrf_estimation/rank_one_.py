@@ -147,7 +147,7 @@ def f_grad_separate(w, X, Y, size_u, size_v):
 
 def rank_one(X, y, n_basis,  w_i=None, drifts=None, callback=None,
     maxiter=500, method='L-BFGS-B', rtol=1e-6,  verbose=0, mode='r1glm',
-    basis=None):
+    hrfs=None, basis=None, bounds=True):
     """
     Estimates a R1-GLM model with a given design matrix.
 
@@ -174,6 +174,11 @@ def rank_one(X, y, n_basis,  w_i=None, drifts=None, callback=None,
 
     method: {'L-BFGS-B', 'TNC'}
         Optimization algorithm.
+
+    bounds: {True, False}
+        If True, constraints the estimated HRF (only in the case of 
+        basis='2hrf' or basis='3hrf') so that the second and third
+        derivative have absolute value < 1.
 
     Returns
     -------
@@ -226,7 +231,7 @@ def rank_one(X, y, n_basis,  w_i=None, drifts=None, callback=None,
         ofunc = f_grad
 
 
-    if basis in ('2hrf', '3hrf'):
+    if bounds and basis in ('2hrf', '3hrf'):
         # constrain the derivatives to not go too far
         bounds = [(1, 1)] + [(-1., 1.)] * (n_basis - 1)  + \
             [(None, None)]* (w_i.shape[0] - n_basis)
@@ -280,7 +285,7 @@ def glm(conditions, onsets, TR, Y, drifts=None, basis='3hrf', mode='r1glm',
         hrf_length=20, oversample=5,
         rtol=1e-8, verbose=False, maxiter=500, callback=None,
         method='L-BFGS-B', n_jobs=1, hrfs=None,
-        return_design_matrix=False):
+        return_design_matrix=False, bounds=True):
     """
     Perform a GLM from BOLD signal, given the conditons, onset,
     TR (repetition time of the scanner) and the BOLD signal.
@@ -342,6 +347,8 @@ def glm(conditions, onsets, TR, Y, drifts=None, basis='3hrf', mode='r1glm',
     method: {'L-BFGS-B', 'TNC'}
         Different algorithmic solvers, only used for 'r1*' modes.
         All should yield the same result but their efficiency might vary.
+    
+    
 
     Returns
     -------
@@ -417,7 +424,8 @@ def glm(conditions, onsets, TR, Y, drifts=None, basis='3hrf', mode='r1glm',
         out = Parallel(n_jobs=n_jobs)(
             delayed(rank_one)(
                 X_design, y_i, size_u, w_i, drifts=drifts, callback=callback, maxiter=maxiter,
-                method=method, rtol=rtol, verbose=verbose, mode=mode, hrfs=hrfs, basis=basis)
+                method=method, rtol=rtol, verbose=verbose, mode=mode, hrfs=hrfs, basis=basis,
+                bounds=bounds)
             for y_i, w_i in zip(Y_split, W_init_split))
 
         counter = 0

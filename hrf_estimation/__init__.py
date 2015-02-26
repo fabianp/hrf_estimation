@@ -4,4 +4,4 @@ from . import utils
 from . import hrf
 from . import data
 
-__version__ = '0.9'
+__version__ = '1.0'

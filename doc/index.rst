@@ -10,6 +10,7 @@ Examples
 ========
 
 .. image:: estimation_natural_images.png
+   :align: center
    :target: http://nbviewer.ipython.org/github/fabianp/hrf_estimation/blob/master/examples/hrf_estimation%20example.ipynb
 
 The following `ipython notebook <http://nbviewer.ipython.org/github/fabianp/hrf_estimation/blob/master/examples/hrf_estimation%20example.ipynb>`_ shows a complete example of how to use the function :func:`hrf_estimation.glm` to estimate the HRF and activation coefficients from a giveb BOLD signal.

@@ -467,5 +467,8 @@ def glm(conditions, onsets, TR, Y, drifts=None, basis='3hrf', mode='r1glm',
         V = V * sign * norm
     out = [U, V]
     if return_design_matrix:
-        out.append(X_design.toarray())
+        if hasattr(X_design, 'toarray'):
+            out.append(X_design.toarray())
+        else:
+            out.append(X_design)
     return out

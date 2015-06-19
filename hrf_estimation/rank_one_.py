@@ -122,7 +122,8 @@ def fprime_separate(w, X, Y, size_u, size_v, X_all):
     return -grad
 
 
-def f_grad_separate(w, X, Y, size_u, size_v):
+def f_grad_separate(w, X, Y, drifts, size_u, size_v):
+    """TODO: use the vector of drifts"""
     u, v, z = w[:size_u], w[size_u:size_u + size_v], w[size_u + size_v:]
     grad = np.zeros((size_u + 2 * size_v))
     norm = 0
@@ -205,7 +206,6 @@ def rank_one(X, y, n_basis,  w_i=None, drifts=None, callback=None,
             # XXX initialization
             w_i = np.ones((n_basis + size_v + drifts.shape[1], n_task))
         elif mode == 'r1glms':
-            # XXX TODO
             w_i = np.random.randn(n_basis + 2 * size_v, n_task)
         else:
             raise NotImplementedError
@@ -213,7 +213,7 @@ def rank_one(X, y, n_basis,  w_i=None, drifts=None, callback=None,
     if mode == 'r1glm':
         assert w_i.shape[0] == n_basis + size_v + drifts.shape[1]
     elif mode == 'r1glms':
-        assert w_i.shape[0] == n_basis + 2 * size_v + drifts.shape[1]
+        assert w_i.shape[0] == n_basis + 2 * size_v
     assert w_i.shape[1] == n_task
 
     if mode == 'r1glms':
@@ -377,6 +377,9 @@ def glm(conditions, onsets, TR, Y, drifts=None, basis='3hrf', mode='r1glm',
         print('.. creating design matrix ..')
     if drifts is None:
         drifts = np.ones((n_scans, 1))
+    elif mode == 'r1glms':
+        print('r1glms does not accept a vector of drifts. drifts will be ignored')
+
 
     X_design, Q = create_design_matrix(
         conditions, onsets, TR, n_scans, basis, oversample, hrf_length)
@@ -411,7 +414,7 @@ def glm(conditions, onsets, TR, Y, drifts=None, basis='3hrf', mode='r1glm',
             W_init = np.concatenate((U_init, V_init))
         else:
             # XXX TODO intercept
-            W_init = np.concatenate((U_init, V_init[:-1], V_init[:-1]))
+            W_init = np.concatenate((U_init, V_init[1:], V_init[1:]))
         if verbose > 0:
             print('.. done initialization ..')
 

@@ -3,7 +3,7 @@ hrf_estimation
 
 This package implements method for the joint estimation of hemodynamic response function (HRF) and activation coefficients (aka beta-maps) from fMRI data. The methods implemented here are described in the paper
 
-`Data-driven HRF estimation for encoding and decoding models <http://hal.inria.fr/hal-00952554/en>`_, Pedregosa et al. 2004
+`Data-driven HRF estimation for encoding and decoding models <http://hal.inria.fr/hal-00952554/en>`_, Pedregosa et al. 2014
 
 
 Examples

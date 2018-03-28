@@ -1,6 +1,8 @@
 Hemodynamic Response Function (HRF) estimation from functional MRI data
 =======================================================================
 
+**Update March 2018: This package is provided with the hope that it is useful for reproducing the experiments in the papers mentioned below. It is however not actively maintained**
+
 This is a Python package that implements several methods for the
 joint estimation of HRF and activation patterns (aka beta-map) from
 fMRI (BOLD) signal.
